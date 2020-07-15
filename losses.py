@@ -7,6 +7,8 @@ import numpy as np
 from scipy.special import softmax
 from torch.autograd import Function
 
+# TODO(2): other loss functions
+
 class FocalLoss(nn.Module):
     def __init__(self, gamma, alpha):
         super(FocalLoss, self).__init__()

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#TODO(3): GPU management
+
 """
 Created on Tue Aug 22 19:41:55 2017
 

@@ -2,6 +2,8 @@ import numpy as np
 from skimage.filters import threshold_otsu
 from sklearn.metrics import jaccard_score
 
+#TODO(2): other evaluation metrics
+
 def binary_iou(pred_eval, y_eval):
     batch_size = y_eval.shape[0]
     jaccard = 0# return sum of this batch

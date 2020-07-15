@@ -2,6 +2,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+#TODO(1): other nn architectures
+    
 class UNet(nn.Module):
     def __init__(self, in_channels, n_classes, depth, wf, padding, batch_norm, up_mode):
         super(UNet, self).__init__()
