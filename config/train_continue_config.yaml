@@ -14,7 +14,7 @@ model:
 # trainer configuration
 trainer:
   checkpoint_dir: "/home/yutongx/3DUNet/checkpoint/"
-  resume: null
+  resume: "/home/yutongx/3DUNet/checkpoint/last_checkpoint.pytorch"
   validate_after_iters: 1024
   log_after_iters: 1024
   epochs: 16
@@ -46,8 +46,8 @@ loaders:
       - "/home/yutongx/local_data/preprocessed_3d/train/"
     slice_builder:
       name: SliceBuilder
-      patch_shape: [128, 128, 128]
-      stride_shape: [32, 32, 32]
+      patch_shape: [64, 128, 128]
+      stride_shape: [16, 32, 32]
     transformer:
       raw:
         - name: RandomFlip
@@ -70,8 +70,8 @@ loaders:
       - "/home/yutongx/local_data/preprocessed_3d/val/"
     slice_builder:
       name: SliceBuilder
-      patch_shape: [128, 128, 128]
-      stride_shape: [128, 128, 128]
+      patch_shape: [64, 128, 128]
+      stride_shape: [64, 128, 128]
     transformer:
       raw:
         - name: ToTensor

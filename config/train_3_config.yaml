@@ -13,7 +13,7 @@ model:
   conv_padding: 1
 # trainer configuration
 trainer:
-  checkpoint_dir: "/home/yutongx/3DUNet/checkpoint/"
+  checkpoint_dir: "/home/yutongx/3DUNet/checkpoint_3/"
   resume: null
   validate_after_iters: 1024
   log_after_iters: 1024
@@ -22,7 +22,7 @@ trainer:
   eval_score_higher_is_better: true
 # optimizer configuration
 optimizer:
-  learning_rate: 0.0001
+  learning_rate: 0.01
   weight_decay: 0
 # loss function configuration
 loss:
@@ -33,6 +33,11 @@ loss:
 eval_metric:
   name: MeanIoU
   ignore_index: null
+# learning rate scheduler configuration
+lr_scheduler:
+  name: StepLR
+  step_size: 10
+  gamma: 0.5
 # data loaders configuration
 loaders:
   dataset: LazyHDF5Dataset

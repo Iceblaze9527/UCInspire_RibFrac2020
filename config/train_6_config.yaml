@@ -7,13 +7,13 @@ model:
   out_channels: 1
   final_sigmoid: true
   f_maps: 64
-  num_levels: 4
+  num_levels: 5
   layer_order: bcr
   is_segmentation: true
   conv_padding: 1
 # trainer configuration
 trainer:
-  checkpoint_dir: "/home/yutongx/3DUNet/checkpoint/"
+  checkpoint_dir: "/home/yutongx/3DUNet/checkpoint_6/"
   resume: null
   validate_after_iters: 1024
   log_after_iters: 1024
@@ -22,7 +22,7 @@ trainer:
   eval_score_higher_is_better: true
 # optimizer configuration
 optimizer:
-  learning_rate: 0.0001
+  learning_rate: 0.001
   weight_decay: 0
 # loss function configuration
 loss:
@@ -33,6 +33,11 @@ loss:
 eval_metric:
   name: MeanIoU
   ignore_index: null
+# learning rate scheduler configuration
+lr_scheduler:
+  name: StepLR
+  step_size: 20
+  gamma: 0.2
 # data loaders configuration
 loaders:
   dataset: LazyHDF5Dataset
@@ -43,11 +48,11 @@ loaders:
   weight_internal_path: null
   train:
     file_paths:
-      - "/home/yutongx/local_data/preprocessed_3d/train/"
+      - "/home/yutongx/local_data/preprocessed_3d_128/train/"
     slice_builder:
       name: SliceBuilder
-      patch_shape: [128, 128, 128]
-      stride_shape: [32, 32, 32]
+      patch_shape: [64, 128, 128]
+      stride_shape: [16, 32, 32]
     transformer:
       raw:
         - name: RandomFlip
@@ -67,11 +72,11 @@ loaders:
           expand_dims: true
   val:
     file_paths:
-      - "/home/yutongx/local_data/preprocessed_3d/val/"
+      - "/home/yutongx/local_data/preprocessed_3d_128/val/"
     slice_builder:
       name: SliceBuilder
-      patch_shape: [128, 128, 128]
-      stride_shape: [128, 128, 128]
+      patch_shape: [64, 128, 128]
+      stride_shape: [64, 128, 128]
     transformer:
       raw:
         - name: ToTensor
