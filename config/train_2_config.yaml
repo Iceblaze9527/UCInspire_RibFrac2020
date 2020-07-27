@@ -48,7 +48,7 @@ loaders:
   weight_internal_path: null
   train:
     file_paths:
-      - "/home/yutongx/local_data/preprocessed_3d_copy/train/"
+      - "/home/yutongx/local_data/preprocessed_3d/train/"
     slice_builder:
       name: SliceBuilder
       patch_shape: [128, 128, 128]
@@ -72,7 +72,7 @@ loaders:
           expand_dims: true
   val:
     file_paths:
-      - "/home/yutongx/local_data/preprocessed_3d_copy/val/"
+      - "/home/yutongx/local_data/preprocessed_3d/val/"
     slice_builder:
       name: SliceBuilder
       patch_shape: [128, 128, 128]
