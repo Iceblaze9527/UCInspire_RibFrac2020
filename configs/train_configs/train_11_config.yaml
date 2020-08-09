@@ -13,8 +13,8 @@ model:
   conv_padding: 1
 # trainer configuration
 trainer:
-  checkpoint_dir: "/home/yutongx/3DUNet/checkpoint/"
-  resume: "/home/yutongx/3DUNet/checkpoint/last_checkpoint.pytorch"
+  checkpoint_dir: "/home/yutongx/3DUNet/checkpoints/checkpoint_11/"
+  resume: null
   validate_after_iters: 1024
   log_after_iters: 1024
   epochs: 16
@@ -22,11 +22,11 @@ trainer:
   eval_score_higher_is_better: true
 # optimizer configuration
 optimizer:
-  learning_rate: 0.0001
+  learning_rate: 0.001
   weight_decay: 0
 # loss function configuration
 loss:
-  name: BCEWithLogitsLoss
+  name: GeneralizedDiceLoss
   weight: null
   ignore_index: null
 # evaluation metric configuration
@@ -43,11 +43,11 @@ loaders:
   weight_internal_path: null
   train:
     file_paths:
-      - "/home/yutongx/local_data/preprocessed_3d/train/"
+      - "/home/yutongx/local_data/preprocessed_3d_128/train/"
     slice_builder:
       name: SliceBuilder
-      patch_shape: [64, 128, 128]
-      stride_shape: [16, 32, 32]
+      patch_shape: [128, 128, 128]
+      stride_shape: [32, 32, 32]
     transformer:
       raw:
         - name: RandomFlip
@@ -67,11 +67,11 @@ loaders:
           expand_dims: true
   val:
     file_paths:
-      - "/home/yutongx/local_data/preprocessed_3d/val/"
+      - "/home/yutongx/local_data/preprocessed_3d_128/val/"
     slice_builder:
       name: SliceBuilder
-      patch_shape: [64, 128, 128]
-      stride_shape: [64, 128, 128]
+      patch_shape: [128, 128, 128]
+      stride_shape: [128, 128, 128]
     transformer:
       raw:
         - name: ToTensor

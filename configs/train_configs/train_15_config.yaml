@@ -1,0 +1,89 @@
+# use a fixed random seed to guarantee that when you run the code twice you will get the same outcome
+manual_seed: 16
+# model configuration
+model:
+  name: UNet3D
+  in_channels: 1
+  out_channels: 1
+  final_sigmoid: true
+  f_maps: 64
+  num_levels: 4
+  layer_order: bcr
+  is_segmentation: true
+  conv_padding: 1
+# trainer configuration
+trainer:
+  checkpoint_dir: "/home/yutongx/3DUNet/checkpoints/checkpoint_15/"
+  resume: null
+  validate_after_iters: 1024
+  log_after_iters: 1024
+  epochs: 16
+  iters: 262144
+  eval_score_higher_is_better: true
+# optimizer configuration
+optimizer:
+  learning_rate: 0.001
+  weight_decay: 0
+# loss function configuration
+loss:
+  name: LovaszSoftmax
+  weight: null
+  ignore_index: null
+# evaluation metric configuration
+eval_metric:
+  name: MeanIoU
+  ignore_index: null
+# data loaders configuration
+loaders:
+  dataset: LazyHDF5Dataset
+  batch_size: 1
+  num_workers: 1
+  raw_internal_path: raw
+  label_internal_path: label
+  weight_internal_path: null
+  train:
+    file_paths:
+      - "/home/yutongx/src_data/preprocessed_3d_128_copy_2_xyt/train/"
+    slice_builder:
+      name: SliceBuilder
+      patch_shape: [128, 128, 128]
+      stride_shape: [32, 32, 32]
+    transformer:
+      raw:
+        - name: Identity
+        - name: RandomFlip
+          proba: 0.5
+        - name: RandomScale
+          scale: [0.8, 1.2]
+        - name: RandomTranslate
+          percent: [-0.1, 0.1]
+        - name: RandomRotate
+          rotate: [-15,15]
+        - name: ToTensor
+          expand_dims: true
+      label:
+        - name: Identity
+        - name: RandomFlip
+          proba: 0.5
+        - name: RandomScale
+          scale: [0.8, 1.2]
+        - name: RandomTranslate
+          percent: [-0.1, 0.1]
+        - name: RandomRotate
+          rotate: [-15,15]
+        - name: ToTensor
+          expand_dims: true
+  val:
+    file_paths:
+      - "/home/yutongx/src_data/preprocessed_3d_128_copy_2_xyt/val/"
+    slice_builder:
+      name: SliceBuilder
+      patch_shape: [128, 128, 128]
+      stride_shape: [128, 128, 128]
+    transformer:
+      raw:
+        - name: ToTensor
+          expand_dims: true
+      label:
+        - name: ToTensor
+          expand_dims: true
