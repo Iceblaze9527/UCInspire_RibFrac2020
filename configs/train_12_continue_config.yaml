@@ -13,8 +13,8 @@ model:
   conv_padding: 1
 # trainer configuration
 trainer:
-  checkpoint_dir: "/home/yutongx/3DUNet/checkpoints/checkpoint_15/"
-  resume: "/home/yutongx/3DUNet/checkpoints/checkpoint_14/best_checkpoint.pytorch"
+  checkpoint_dir: "/home/yutongx/3DUNet/checkpoints/checkpoint_12/"
+  resume: "/home/yutongx/3DUNet/checkpoints/checkpoint_12/best_checkpoint.pytorch"
   validate_after_iters: 1024
   log_after_iters: 1024
   epochs: 16
@@ -26,13 +26,20 @@ optimizer:
   weight_decay: 0
 # loss function configuration
 loss:
-  name: LovaszSoftmax
+  name: TverskyLoss
+  alpha: 0.2
+  beta: 0.8
   weight: null
   ignore_index: null
 # evaluation metric configuration
 eval_metric:
   name: MeanIoU
   ignore_index: null
+# learning rate scheduler configuration
+lr_scheduler:
+  name: MultiStepLR
+  milestones: [25,50,75]
+  gamma: 0.5
 # data loaders configuration
 loaders:
   dataset: LazyHDF5Dataset
@@ -43,7 +50,7 @@ loaders:
   weight_internal_path: null
   train:
     file_paths:
-      - "/home/yutongx/src_data/preprocessed_3d_128_copy_xyt/train/"
+      - "/home/yutongx/src_data/preprocessed_3d_128_xyt/train/"
     slice_builder:
       name: SliceBuilder
       patch_shape: [128, 128, 128]
@@ -75,7 +82,7 @@ loaders:
           expand_dims: true
   val:
     file_paths:
-      - "/home/yutongx/src_data/preprocessed_3d_128_copy_xyt/val/"
+      - "/home/yutongx/src_data/preprocessed_3d_128_xyt/val/"
     slice_builder:
       name: SliceBuilder
       patch_shape: [128, 128, 128]
