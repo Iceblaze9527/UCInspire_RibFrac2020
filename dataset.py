@@ -1,48 +1,52 @@
-import os
+from torch.utils.data import Dataset
 import numpy as np
-
-from torch.utils.data import Dataset, ConcatDataset
+import nibabel as nib
+from scipy.ndimage.interpolation import zoom
 
 class DatasetGen(Dataset):
-    def __init__(self, img_path, trans):
+    def __init__(self, img_name, bbox_name, resize=64):
         super(DatasetGen, self).__init__()
-        self.img_names = sorted([os.path.join(img_path, image_name) for image_name in os.listdir(img_path)])
-        self.trans = trans
+        self.image = np.swapaxes(nib.load(img_name).get_fdata(), -1, 0) if isinstance(img_name, str) else raise TypeError('img_name is not a string.')
+        self.bboxes = self.get_bbox(bbox_name) if isinstance(bbox_name, str) else raise TypeError('bbox_name is not a string.')
+        self.resize = resize if isinstance(self.resize, int) else raise TypeError('resize factor is not an integer.')
+        
+        assert (self.image).ndim == 3, 'Input dimension mismatch.'
+        assert (self.bboxes).shape[1] == 7, 'Bounding box dim mismatch.'
 
-    def __getitem__(self, index):
-        #TODO(2): uniform data loading preprocessing function
-        img_pack = (np.load(self.img_names[index], allow_pickle=True))[()]
+    def __getitem__(self, index): 
+        bbox = self.bboxes[index, :-1]
+        label = self.bboxes[index, -1]
         
-        if img_pack['image'] is None:
-            raise ValueError('Fail to load image at index:%d'%(index))
-        else:
-            image = img_pack['image']
+        img = self.crop(self.image, bbox)
+        img = zoom(img, [img.shape[0], self.resize, self.resize]) 
+        img = np.expand_dims(img, axis=0)
         
-        if img_pack['masks'] is None:
-            label = np.zeros(image.shape).astype(np.uint8)
-        else:
-            label = np.where(img_pack['masks']==0,0,1).astype(np.uint8)
-        
-        
-        if self.trans is not None:
-            image = self.trans(images=image)
-            label = self.trans(images=label)
-        
-        ##normalization
-        image = image.astype(np.float64)
-        image *= 1/image.max()# normalize to 0 and 1
-        
-        if image.ndim == 2:#expand single channel images
-            image = image[np.newaxis, :]
-        
-        return image, label
+        return torch.from_numpy(img), torch.from_numpy(label).long()
     
     def __len__(self):
-        return len(self.img_names)
+        return (self.bboxes).shape[0]
+    
+    @staticmethod
+    def get_bbox(bbox_name):
+        bboxes_src = np.load(bbox_name, allow_pickle=True)
+        
+        label_name = ('gt_pos', 'rpn_pos', 'rpn_neg')
+        assert set(bboxes_src.files) == set(label_name), 'Label mismatch.'
+        
+        labelize = lambda name, label: np.concatenate((bboxes_src[name], 
+                                                       (label*np.ones((bbox_src[name].shape[0],1))).astype(np.uint8)), axis=1)
 
-def dataset_gen(img_path, seqs):
-    if seqs:
-        dataset_list = [DatasetGen(img_path, seq) for seq in seqs]
-        return ConcatDataset(dataset_list)
-    else:
-        return DatasetGen(img_path, None)
+        return np.concatenate((labelize(label_name[0],1), labelize(label_name[1],1), labelize(label_name[2],0)), axis=0)
+    
+    @staticmethod
+    def crop(image, bbox):
+        zc, yc, xc, dz, dy, dx = bbox
+        
+        st = {'zs': np.floor(zc - dz/2, dtype=np.uint8)
+            'zt': np.ceil(zc + dz/2, dtype=np.uint8) + 1
+            'ys': np.floor(yc - dy/2, dtype=np.uint8)
+            'yt': np.ceil(yc + dy/2, dtype=np.uint8) + 1
+            'xs': np.floor(xc - dx/2, dtype=np.uint8)
+            'xt': np.ceil(xc + dx/2, dtype=np.uint8) + 1}
+        
+        return image[st['zs']:st['zt'], st['ys']:st['yt'], st['xs']:st['xt']]

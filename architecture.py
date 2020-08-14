@@ -1,5 +1,7 @@
 import torch.nn as nn
 
+bn_momentum = 0.1
+
 class ResBlock3d(nn.Module):
     def __init__(self, n_in, n_out, stride = 1):
         super(ResBlock3d, self).__init__()
@@ -92,3 +94,32 @@ class FeatureNet(nn.Module):
             nn.ConvTranspose3d(64, 64, kernel_size=2, stride=2),
             nn.BatchNorm3d(64),
             nn.ReLU(inplace=True))
+        
+        self.fc1=nn.Linear(128, 50)##new
+        self.fc2=nn.Linear(50, 2)##new 
+    
+    def forward(self, x):
+        out = self.preBlock(x)#16
+        out_pool = out
+        
+        out1 = self.forw1(out_pool)#32
+        out1_pool, _ = self.maxpool2(out1)
+        
+        out2 = self.forw2(out1_pool)#64
+        out2_pool, _ = self.maxpool3(out2)
+        
+        out3 = self.forw3(out2_pool)#96
+        out3_pool, _ = self.maxpool4(out3)
+        
+        out4 = self.forw4(out3_pool)#96
+
+        rev3 = self.path1(out4)
+        comb3 = self.back3(torch.cat((rev3, out3), 1))#96+96
+        
+        rev2 = self.path2(comb3)
+        comb2 = self.back2(torch.cat((rev2, out2), 1))#64+64
+        
+        fc1 = self.fc1(comb2)
+        fc2 = self.fc2(fc1)
+        
+        return fc2
