@@ -96,7 +96,7 @@ class FeatureNet(nn.Module):
             nn.ReLU(inplace=True))
         
         self.fc1=nn.Linear(128, 50)##new
-        self.fc2=nn.Linear(50, 1)##new 
+        self.fc2=nn.Linear(50, out_channels)##new 
     
     def forward(self, x):
         out = self.preBlock(x)#16

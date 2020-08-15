@@ -4,7 +4,7 @@ import nibabel as nib
 from scipy.ndimage.interpolation import zoom
 
 class DatasetGen(Dataset):
-    def __init__(self, img_name, bbox_name, resize=64):
+    def __init__(self, img_name, bbox_name, resize=64, augmenter=None):
         super(DatasetGen, self).__init__()
         if not isinstance(img_name, str): 
             raise TypeError('img_name is not a string.')
@@ -13,20 +13,22 @@ class DatasetGen(Dataset):
         if not isinstance(resize, int):
             raise TypeError('resize factor is not an integer.')
         
-        self.image = np.swapaxes(nib.load(img_name).get_fdata(), -1, 0)
+        self.img_name = img_name
         self.bboxes = self.get_bboxes(bbox_name)
         self.resize = resize
+        self.aug = augmenter
         
-        assert (self.image).ndim == 3, 'Input dimension mismatch.'
         assert (self.bboxes).shape[1] == 7, 'Bounding box dim mismatch.'
 
-    def __getitem__(self, index): 
+    def __getitem__(self, index):
         bbox = self.bboxes[index, :-1]
         label = self.bboxes[index, -1]
+        img = np.swapaxes(nib.load(self.img_name).get_fdata(), -1, 0)
+        assert img.ndim == 3, 'Input dimension mismatch.'
         
-        img = self.crop(self.image, bbox)
-        factor = np.array([img.shape[0], self.resize, self.resize]) / np.array(img.shape)
-        img = zoom(img, factor, order=0) 
+        factor = np.array([self.resize, self.resize, self.resize]) / np.array((self.image).shape)
+        img = zoom(self.crop(img, bbox), factor, order=0)
+        img = self.aug(images=img) if self.aug is not None else img
         img = np.expand_dims(img, axis=0)
         
         return torch.from_numpy(img), torch.from_numpy(label).long()
