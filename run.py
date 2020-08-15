@@ -15,7 +15,7 @@ import utils
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '5,6'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
 seed = 15
 
 #data params
@@ -36,7 +36,7 @@ eps = 1e-08
 weight_decay = 0
 
 #lr scheduler params
-milestone = [128, 192]
+milestones = [128, 192]
 lr_gamma = 0.1
 
 #save params
@@ -76,7 +76,6 @@ def main():
     val_loader = get_loader(img_path, bbox_path, mode='val', resize=resize, augmenter=aug, batch_size=batch_size)
     
     model = FeatureNet(in_channels=1, out_channels=1)
-    
     ##TODO(2) load checkpoint
     ##TODO(3) utils.gpu_manager
     device_cnt = torch.cuda.device_count()
@@ -91,7 +90,7 @@ def main():
         print('Only CPU is available.')
     
     optim = torch.optim.Adam(model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestone=milestone, gamma=lr_gamma)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=milestones, gamma=lr_gamma)
     
     run_model(train_loader = train_loader, val_loader = val_loader, model = model, epochs = epochs, 
               optim = optim, scheduler = scheduler, save_path = save_path)

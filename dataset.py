@@ -1,3 +1,4 @@
+import torch
 from torch.utils.data import Dataset
 
 import numpy as np
@@ -27,12 +28,14 @@ class DatasetGen(Dataset):
         img = np.swapaxes(nib.load(self.img_name).get_fdata(), -1, 0)
         assert img.ndim == 3, 'Input dimension mismatch.'
         
-        factor = np.array([self.resize, self.resize, self.resize]) / np.array((self.image).shape)
-        img = zoom(self.crop(img, bbox), factor, order=0)
-        img = self.aug(images=img) if self.aug is not None else img
-        img = np.expand_dims(img, axis=0)
+        img = self.crop(img, bbox)
+        factor = np.array([self.resize, self.resize, self.resize]) / np.array(img.shape)
+        img = zoom(img, factor, order=0)
         
-        return torch.from_numpy(img), torch.from_numpy(label).long()
+        img = self.aug(image=np.swapaxes(img, -1, 0)) if self.aug is not None else img #H*W*D
+        img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#C*D*H*W
+        
+        return torch.from_numpy(img), torch.from_numpy(np.array([label]))
     
     def __len__(self):
         return (self.bboxes).shape[0]
@@ -54,12 +57,12 @@ class DatasetGen(Dataset):
     def crop(image, bbox):
         zc, yc, xc, dz, dy, dx = bbox
         
-        st = {'zs': np.floor(zc - dz/2, dtype=np.int32),
-            'zt': np.ceil(zc + dz/2, dtype=np.int32) + 1,
-            'ys': np.floor(yc - dy/2, dtype=np.int32),
-            'yt': np.ceil(yc + dy/2, dtype=np.int32) + 1,
-            'xs': np.floor(xc - dx/2, dtype=np.int32),
-            'xt': np.ceil(xc + dx/2, dtype=np.int32) + 1}
+        st = {'zs': np.floor(zc - dz/2).astype(np.int32),
+            'zt': np.ceil(zc + dz/2).astype(np.int32) + 1,
+            'ys': np.floor(yc - dy/2).astype(np.int32),
+            'yt': np.ceil(yc + dy/2).astype(np.int32) + 1,
+            'xs': np.floor(xc - dx/2).astype(np.int32),
+            'xt': np.ceil(xc + dx/2).astype(np.int32) + 1}
         
         assert st['zs'] > 0 and st['ys'] > 0 and st['xs'] > 0, 'Invalid bounding box start point (negative coordinates).'
         
