@@ -33,7 +33,7 @@ class ResBlock3d(nn.Module):
         return out
 
 class FeatureNet(nn.Module):
-    def __init__(self, config, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels):
         super(FeatureNet, self).__init__()
         self.preBlock = nn.Sequential(
             nn.Conv3d(in_channels, 24, kernel_size = 3, padding = 1, stride=2),
@@ -96,7 +96,7 @@ class FeatureNet(nn.Module):
             nn.ReLU(inplace=True))
         
         self.fc1=nn.Linear(128, 50)##new
-        self.fc2=nn.Linear(50, 2)##new 
+        self.fc2=nn.Linear(50, 1)##new 
     
     def forward(self, x):
         out = self.preBlock(x)#16
