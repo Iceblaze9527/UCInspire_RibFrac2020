@@ -1,16 +1,19 @@
 import os
 import re
 
-
 import torch
-from torch.utils.data import ConcatDataset, DataLoader
-from torch.nn import DataParallel
 import imgaug.augmenters as iaa
-
+##TODO(3)
+from torch.utils.data import ConcatDataset, DataLoader
+##TODO(3)
+from torch.nn import DataParallel
 
 from architecture import FeatureNet
 from dataset import DatasetGen
+from oper import run_model
+import utils
 
+#TODO(3) config files
 #set global variable
 os.environ['CUDA_VISIBLE_DEVICES'] = '5,6'
 seed = 15
@@ -22,6 +25,10 @@ resize = 64
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
 
+#training params
+epochs = 256
+batch_size = 64
+
 #optim params
 lr = 1e-3
 betas = (0.9, 0.999)
@@ -29,22 +36,13 @@ eps = 1e-08
 weight_decay = 0
 
 #lr scheduler params
+milestone = [128, 192]
+lr_gamma = 0.1
 
-#training params
-epochs = 16
-batch_size = 64
+#save params
+save_path = './checkpoints/checkpoint_1'
 
-#checkpoint params
-save_path = './checkpoints'
-
-def set_global_seed(seed=15):
-    seed = 14
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True 
-    torch.backends.cudnn.benchmark = False
-
-def get_dataset(img_path, bbox_path, resize=64, augmenter=None):
+def get_dataset(img_path, bbox_path, resize=64, augmenter=None):##TODO(3) dataset module
     idx = lambda name: re.sub(r'\D', '', name)
     get_names = lambda path: sorted([os.path.join(path, name) for name in os.listdir(path)], key=idx)
     
@@ -57,7 +55,7 @@ def get_dataset(img_path, bbox_path, resize=64, augmenter=None):
     
     return ConcatDataset(datasets)
 
-def get_loader(img_path, bbox_path, mode, resize=64, augmenter=None, batch_size=1):
+def get_loader(img_path, bbox_path, mode, resize=64, augmenter=None, batch_size=1):##TODO(3) dataset module
     img_path = os.path.join(img_path, mode)
     bbox_path = os.path.join(bbox_path, mode)
 
@@ -67,34 +65,36 @@ def get_loader(img_path, bbox_path, mode, resize=64, augmenter=None, batch_size=
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 def main():
-    set_global_seed(seed)
+    utils.set_global_seed(seed)
     
     aug = iaa.SomeOf((0, None), [
         iaa.Affine(scale=scale),
         iaa.Affine(translate_percent=translation)
     ])
           
-    train_loader = get_loader(img_path, bbox_path, 'train', resize=resize, augmenter=aug, batch_size=batch_size)
-    val_loader = get_loader(img_path, bbox_path, 'val', resize=resize, augmenter=aug, batch_size=batch_size)
+    train_loader = get_loader(img_path, bbox_path, mode='train', resize=resize, augmenter=aug, batch_size=batch_size)
+    val_loader = get_loader(img_path, bbox_path, mode='val', resize=resize, augmenter=aug, batch_size=batch_size)
     
     model = FeatureNet(in_channels=1, out_channels=1)
+    
+    ##TODO(2) load checkpoint
+    ##TODO(3) utils.gpu_manager
     device_cnt = torch.cuda.device_count()
     if device_cnt > 0:
         if device_cnt == 1:
-            print('Only one GPU is available.')
+            print('Only 1 GPU is available.')
         else:
-            print(f"{device_cnt} GPUs available.")
+            print(f"{device_cnt} GPUs are available.")
             model = DataParallel(model)
         model = model.cuda()
     else:
         print('Only CPU is available.')
     
-#     optim = torch.optim.Adam(model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
-
-#     ##TODO: lr scheduler
+    optim = torch.optim.Adam(model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestone=milestone, gamma=lr_gamma)
     
-#     oper.run_model(train_loader = train_loader, val_loader = val_loader, model = model, optim = optim, 
-#                    epochs = epochs, batch_size = batch_size, save_path = save_path)
+    run_model(train_loader = train_loader, val_loader = val_loader, model = model, epochs = epochs, 
+              optim = optim, scheduler = scheduler, save_path = save_path)
     
 if __name__ == '__main__':
     main()
