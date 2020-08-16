@@ -4,6 +4,7 @@ import datetime
 
 import torch
 
+##TODO(3)
 class Logger(object):
     def __init__(self,log_path):
         self.terminal = sys.stdout

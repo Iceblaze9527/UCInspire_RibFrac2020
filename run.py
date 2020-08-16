@@ -4,18 +4,19 @@ import re
 import torch
 import imgaug.augmenters as iaa
 ##TODO(3)
-from torch.utils.data import ConcatDataset, DataLoader
+from torch.utils.data import ConcatDataset, Subset, DataLoader
 ##TODO(3)
 from torch.nn import DataParallel
+import numpy as np
 
 from architecture import FeatureNet
-from dataset import DatasetGen
+from dataset import AllDataset, PosDataset, NegDataset
 from oper import run_model
 import utils
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '5,6,7'
 seed = 15
 
 #data params
@@ -27,7 +28,7 @@ translation = (-0.2,0.2)
 
 #training params
 epochs = 16
-batch_size = 64
+batch_size = 128
 
 #optim params
 lr = 1e-3
@@ -42,7 +43,10 @@ lr_gamma = 0.1
 #save params
 save_path = './checkpoints/checkpoint_1'
 
-def get_dataset(img_path, bbox_path, resize=64, augmenter=None):##TODO(3) dataset module
+##TODO(3) dataset module
+def get_dataset(img_path, bbox_path, sample_mode, resize=64, augmenter=None):
+    assert sample_mode in ['all', 'pos', 'neg'], f'Invalid sample mode, got {sample_mode}.'
+    
     idx = lambda name: re.sub(r'\D', '', name)
     get_names = lambda path: sorted([os.path.join(path, name) for name in os.listdir(path)], key=idx)
     
@@ -51,16 +55,42 @@ def get_dataset(img_path, bbox_path, resize=64, augmenter=None):##TODO(3) datase
     
     datasets = []
     for img_name, bbox_name in zip(img_names, bbox_names):
-        datasets.append(DatasetGen(img_name, bbox_name, resize, augmenter))
+        if sample_mode == 'all':
+            datasets.append(AllDataset(img_name, bbox_name, resize, augmenter))
+        elif sample_mode == 'pos':
+            datasets.append(PosDataset(img_name, bbox_name, resize, augmenter))
+        else:
+            datasets.append(NegDataset(img_name, bbox_name, resize, augmenter))
     
     return ConcatDataset(datasets)
 
-def get_loader(img_path, bbox_path, mode, resize=64, augmenter=None, batch_size=1):##TODO(3) dataset module
-    img_path = os.path.join(img_path, mode)
-    bbox_path = os.path.join(bbox_path, mode)
-
-    dataset = get_dataset(img_path, bbox_path, resize = resize, augmenter = augmenter)
-    print(''.join((mode, ' dataset size: ', str(len(dataset)))))
+##TODO(3) dataset module
+def get_loader(img_path, bbox_path, loader_mode, sample_mode, resize=64, augmenter=None, batch_size=1, 
+               sample_size=800, pos_rate=0.2):
+    
+    assert loader_mode in ['train', 'val'], f'Invalid mode, got {loader_mode}.'
+    assert sample_mode in ['all', 'sampled'], f'Invalid sample mode, got {sample_mode}.'
+    
+    img_path = os.path.join(img_path, loader_mode)
+    bbox_path = os.path.join(bbox_path, loader_mode)
+    
+    if sample_mode == 'all':
+        dataset = get_dataset(img_path, bbox_path, sample_mode = 'all', resize = resize, augmenter = augmenter)
+        print(''.join((loader_mode, ' dataset size: ', str(len(dataset)))))
+    else:
+        pos_dataset = get_dataset(img_path, bbox_path, sample_mode = 'pos', resize = resize, augmenter = augmenter)
+        neg_dataset = get_dataset(img_path, bbox_path, sample_mode = 'neg', resize = resize, augmenter = augmenter)
+        
+        pos_idx = np.random.randint(len(pos_dataset), size = int(sample_size * pos_rate))
+        pos_dataset = Subset(pos_dataset, pos_idx)
+        
+        neg_idx = np.random.randint(len(neg_dataset), size = int(sample_size * (1 - pos_rate)))
+        neg_dataset = Subset(neg_dataset, neg_idx)
+ 
+        print(' '.join((loader_mode, sample_mode, 'pos', 'dataset size:', str(len(pos_dataset)))))
+        print(' '.join((loader_mode, sample_mode, 'neg', 'dataset size:', str(len(neg_dataset)))))
+        
+        dataset = ConcatDataset([pos_dataset, neg_dataset])
     
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
@@ -72,8 +102,10 @@ def main():
         iaa.Affine(translate_percent=translation)
     ])
           
-    train_loader = get_loader(img_path, bbox_path, mode='train', resize=resize, augmenter=aug, batch_size=batch_size)
-    val_loader = get_loader(img_path, bbox_path, mode='val', resize=resize, augmenter=aug, batch_size=batch_size)
+    train_loader = get_loader(img_path, bbox_path, loader_mode='train', sample_mode = 'sampled', resize=resize, augmenter=aug, 
+                              batch_size=batch_size, sample_size=800, pos_rate=0.2)
+    val_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = 'sampled', resize=resize, augmenter=aug, 
+                            batch_size=batch_size, sample_size=200, pos_rate=0.2)
     
     model = FeatureNet(in_channels=1, out_channels=1)
     ##TODO(2) load checkpoint
