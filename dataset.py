@@ -32,6 +32,7 @@ class DatasetGen(Dataset):
         factor = np.array([self.resize, self.resize, self.resize]) / np.array(img.shape)
         img = zoom(img, factor, order=0)
         
+        ##TODO(1): use another package
         img = self.aug(image=np.swapaxes(img, -1, 0)) if self.aug is not None else img #H*W*D
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#C*D*H*W
         

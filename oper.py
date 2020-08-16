@@ -23,11 +23,11 @@ def train(loader, model, optim):
     for idx, (X, y) in tqdm(enumerate(loader), total=len(loader), desc='Training'):
         optim.zero_grad()
         X = X.float().cuda() # [N, IC=1, D, H, W]
-        y = y.long().cuda() # foreground  = 1
+        y = y.float().cuda() # foreground  = 1
         pred = model(X) # foreground logit proba [N, 1]
         
         loss = nn.BCEWithLogitsLoss()(pred, y)
-        y_true = y.detach().cpu().numpy()
+        y_true = y.detach().cpu().numpy().astype(np.uint8)
         y_score = torch.sigmoid(pred).detach().cpu().numpy()
         
         losses = np.concatenate((losses, loss.detach().cpu().numpy().reshape(-1)))
@@ -62,7 +62,7 @@ def evaluate(loader, model):
             pred = model(X) # foreground logit proba [N, 1]
             
             loss = nn.BCEWithLogitsLoss()(pred, y)
-            y_true = y.detach().cpu().numpy()
+            y_true = y.detach().cpu().numpy().astype(np.uint8)
             y_score = torch.sigmoid(pred).detach().cpu().numpy()
 
             losses = np.concatenate((losses, loss.detach().cpu().numpy().reshape(-1)))
@@ -97,8 +97,8 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
     start = utils.tic()
     
     min_loss = 65536
+    print('---------------------') 
     for epoch in tqdm(range(1, epochs + 1), desc = 'Epoch'):
-        print('---------------------') 
         torch.cuda.synchronize()
         epoch_start = utils.tic()
         print('start at: ', utils.timestamp())

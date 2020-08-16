@@ -15,18 +15,18 @@ import utils
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 seed = 15
 
 #data params
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox/'
-resize = 64
+resize = 32
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
 
 #training params
-epochs = 256
+epochs = 16
 batch_size = 64
 
 #optim params

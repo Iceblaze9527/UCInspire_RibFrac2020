@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 bn_momentum = 0.1
@@ -95,8 +96,9 @@ class FeatureNet(nn.Module):
             nn.BatchNorm3d(64),
             nn.ReLU(inplace=True))
         
-        self.fc1=nn.Linear(128, 50)##new
-        self.fc2=nn.Linear(50, out_channels)##new 
+        self.fc1=nn.Linear(128*8*8*8, 4096)##new
+        self.fc2=nn.Linear(4096, 512)##new
+        self.fc3=nn.Linear(512, out_channels)##new 
     
     def forward(self, x):
         out = self.preBlock(x)#16
@@ -119,7 +121,9 @@ class FeatureNet(nn.Module):
         rev2 = self.path2(comb3)
         comb2 = self.back2(torch.cat((rev2, out2), 1))#64+64
         
-        fc1 = self.fc1(comb2)
-        fc2 = self.fc2(fc1)
+        flatten = comb2.view(-1, 128*8*8*8)
+        fc2 = self.fc1(flatten)
+        fc3 = self.fc2(fc2)
+        out = self.fc3(fc3)
         
-        return fc2
+        return out
