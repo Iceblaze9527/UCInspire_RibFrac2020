@@ -26,18 +26,23 @@ resize = 32
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
 
+train_sample_size=800
+train_pos_rate=0.2
+val_sample_size=200
+val_pos_rate=0.2
+
 #training params
 epochs = 16
-batch_size = 128
+batch_size = 64
 
 #optim params
-lr = 1e-3
+lr = 1e-4
 betas = (0.9, 0.999)
 eps = 1e-08
-weight_decay = 0
+weight_decay = 1e-4
 
 #lr scheduler params
-milestones = [128, 192]
+milestones = [4, 8]
 lr_gamma = 0.1
 
 #save params
@@ -103,12 +108,12 @@ def main():
     ])
           
     train_loader = get_loader(img_path, bbox_path, loader_mode='train', sample_mode = 'sampled', resize=resize, augmenter=aug, 
-                              batch_size=batch_size, sample_size=800, pos_rate=0.2)
+                              batch_size=batch_size, sample_size=train_sample_size, pos_rate=train_pos_rate)
     val_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = 'sampled', resize=resize, augmenter=aug, 
-                            batch_size=batch_size, sample_size=200, pos_rate=0.2)
+                            batch_size=batch_size, sample_size=val_sample_size, pos_rate=val_pos_rate)
     
     model = FeatureNet(in_channels=1, out_channels=1)
-    ##TODO(2) load checkpoint
+    ##TODO(1) load checkpoint
     ##TODO(3) utils.gpu_manager
     device_cnt = torch.cuda.device_count()
     if device_cnt > 0:

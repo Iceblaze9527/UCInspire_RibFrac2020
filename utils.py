@@ -4,7 +4,7 @@ import datetime
 
 import torch
 
-##TODO(3)
+##TODO(2)
 class Logger(object):
     def __init__(self,log_path):
         self.terminal = sys.stdout
@@ -27,7 +27,5 @@ def set_global_seed(seed=15):
     torch.backends.cudnn.benchmark = False
 
 timestamp = lambda: time.asctime(time.localtime(time.time()))
-
 tic = lambda: time.time()
-
 delta_time = lambda start, end: str(datetime.timedelta(seconds=round(end-start,3)))

@@ -15,6 +15,7 @@ th = 0.5
 
 def train(loader, model, optim):
     model.train()
+    torch.autograd.set_detect_anomaly(True)
     
     losses = np.array([])
     y_true_all = np.array([])
@@ -34,7 +35,8 @@ def train(loader, model, optim):
         y_true_all = np.concatenate((y_true_all, y_true.reshape(-1)))
         y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
         
-        loss.backward()
+        with torch.autograd.detect_anomaly():
+            loss.backward()
         optim.step()
 
         del X, y, pred, loss
@@ -87,11 +89,11 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     
-    #TODO(3) change to logging
+    #TODO(2) change to logging
     sys.stdout = utils.Logger(os.path.join(save_path, 'log'))
     tb_writer = SummaryWriter(log_path)
     
-    #TODO(3)
+    #TODO(2)
     print('====================')
     print('start running at: ', utils.timestamp())
     start = utils.tic()
@@ -101,10 +103,11 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
     for epoch in tqdm(range(1, epochs + 1), desc = 'Epoch'):
         torch.cuda.synchronize()
         epoch_start = utils.tic()
+        print('---------------------')
         print('start at: ', utils.timestamp())
         
         train_loss, train_acc, train_prc, train_rec = train(loader=train_loader, model=model, optim=optim)
-        val_loss, val_acc, val_prc, val_rec = evaluate(loader=train_loader, model=model)
+        val_loss, val_acc, val_prc, val_rec = evaluate(loader=val_loader, model=model)
         scheduler.step()
         
         tb_writer.add_scalar('learning_rate', optim.param_groups[0]['lr'], global_step=epoch)
@@ -118,7 +121,19 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
         print('end at: ', utils.timestamp())
         print('epoch runtime: ', utils.delta_time(epoch_start, epoch_end))
         
-        #TODO(1): save model criteria
+        print('---------------------')
+        print('Train Results:')
+        print('Loss: ', train_loss)
+        print('Accuracy: ', train_acc)
+        print('Precision:', train_prc)
+        print('Recall:', train_rec)
+        print('---------------------')
+        print('Validation Results:')
+        print('Loss: ', val_loss)
+        print('Accuracy: ', val_acc)
+        print('Precision:', val_prc)
+        print('Recall:', val_rec)
+        
         if val_loss < min_loss:
             min_loss = val_loss
             ckpt_path = os.path.join(save_path, 'checkpoint.tar.gz')
