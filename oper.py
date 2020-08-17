@@ -10,6 +10,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score
 from tqdm import tqdm
 
 import utils
+from metrics import metrics
 
 th = 0.5
 
@@ -42,12 +43,7 @@ def train(loader, model, optim):
         del X, y, pred, loss
         torch.cuda.empty_cache()
     
-    y_pred_all = np.where(y_score_all > th, 1, 0).astype(np.uint8)
-    accuracy = accuracy_score(y_true_all, y_pred_all)
-    precision = precision_score(y_true_all, y_pred_all)
-    recall = recall_score(y_true_all, y_pred_all)
-    
-    return np.average(losses), accuracy, precision, recall
+    return losses, y_true_all, y_score_all
 
 
 def evaluate(loader, model):
@@ -74,12 +70,7 @@ def evaluate(loader, model):
             del X, y, pred, loss
             torch.cuda.empty_cache()
     
-    y_pred_all = np.where(y_score_all > th, 1, 0).astype(np.uint8)
-    accuracy = accuracy_score(y_true_all, y_pred_all)
-    precision = precision_score(y_true_all, y_pred_all)
-    recall = recall_score(y_true_all, y_pred_all)
-    
-    return np.average(losses), accuracy, precision, recall
+    return losses, y_true_all, y_score_all
 
 
 def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_path): 
@@ -89,37 +80,35 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     
-    #TODO(2) change to logging
-    sys.stdout = utils.Logger(os.path.join(save_path, 'log'))
     tb_writer = SummaryWriter(log_path)
     
-    #TODO(2)
+    #TODO(2): logger module
     print('====================')
     print('start running at: ', utils.timestamp())
     start = utils.tic()
     
+    #TODO(3): save criteria
     min_loss = 65536
-    print('---------------------') 
+    print('====================')
     for epoch in tqdm(range(1, epochs + 1), desc = 'Epoch'):
         torch.cuda.synchronize()
         epoch_start = utils.tic()
-        print('---------------------')
         print('start at: ', utils.timestamp())
         
-        train_loss, train_acc, train_prc, train_rec = train(loader=train_loader, model=model, optim=optim)
-        val_loss, val_acc, val_prc, val_rec = evaluate(loader=val_loader, model=model)
-        scheduler.step()
+        train_losses, train_y_true, train_y_score = train(loader=train_loader, model=model, optim=optim)
+        val_losses, val_y_true, val_y_score = evaluate(loader=val_loader, model=model)
         
-        tb_writer.add_scalar('learning_rate', optim.param_groups[0]['lr'], global_step=epoch)
-        tb_writer.add_scalars('Loss', {'train_loss': train_loss, 'val_loss': val_loss}, global_step=epoch)
-        tb_writer.add_scalars('Accuracy', {'train_acc': train_acc, 'val_acc': val_acc}, global_step=epoch)
-        tb_writer.add_scalars('Precision', {'train_precision': train_prc, 'val_precision': val_prc}, global_step=epoch)
-        tb_writer.add_scalars('Recall', {'train_recall': train_rec, 'val_recall': val_rec}, global_step=epoch)
+        scheduler.step()
         
         torch.cuda.synchronize()
         epoch_end = utils.tic()
         print('end at: ', utils.timestamp())
         print('epoch runtime: ', utils.delta_time(epoch_start, epoch_end))
+       
+        train_loss = np.average(train_losses)
+        train_acc, train_prc, train_rec, train_roc_auc, train_curve = metrics(train_y_true, train_y_score, threshold=0.5)
+        val_loss = np.average(val_losses) 
+        val_acc, val_prc, val_rec, val_roc_auc, val_curve = metrics(val_y_true, val_y_score, threshold=0.5)
         
         print('---------------------')
         print('Train Results:')
@@ -127,25 +116,34 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
         print('Accuracy: ', train_acc)
         print('Precision:', train_prc)
         print('Recall:', train_rec)
+        print('ROC AUC:', train_roc_auc)
+        
         print('---------------------')
         print('Validation Results:')
         print('Loss: ', val_loss)
         print('Accuracy: ', val_acc)
         print('Precision:', val_prc)
         print('Recall:', val_rec)
+        print('ROC AUC:', val_roc_auc)
+
+        tb_writer.add_scalar('learning_rate', optim.param_groups[0]['lr'], global_step=epoch)
+        tb_writer.add_scalars('Loss', {'train_loss': train_loss, 'val_loss': val_loss}, global_step=epoch)
+        tb_writer.add_scalars('Accuracy', {'train_acc': train_acc, 'val_acc': val_acc}, global_step=epoch)
+        tb_writer.add_scalars('Precision', {'train_precision': train_prc, 'val_precision': val_prc}, global_step=epoch)
+        tb_writer.add_scalars('Recall', {'train_recall': train_rec, 'val_recall': val_rec}, global_step=epoch)
+        tb_writer.add_scalars('ROC AUC', {'train_roc_auc': train_roc_auc, 'val_roc_auc': val_roc_auc}, global_step=epoch)
+        tb_writer.add_figure('ROC curves', [train_curve, val_curve], global_step=epoch)##
         
+        #TODO(3): save criteria
         if val_loss < min_loss:
             min_loss = val_loss
             ckpt_path = os.path.join(save_path, 'checkpoint.tar.gz')
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optim_state_dict': optim.state_dict(),
-                }, ckpt_path)
+            torch.save({'epoch': epoch, 'model_state_dict': model.state_dict(), 
+                        'optim_state_dict': optim.state_dict(),}, ckpt_path)
+        
+        print('====================')
     
-    print('---------------------')
     end = utils.tic()
     print('end running at: ', utils.timestamp())
     print('overall runtime: ', utils.delta_time(start, end))
-    
-    tb_writer.close()
+    print('====================')

@@ -5,13 +5,15 @@ import numpy as np
 import nibabel as nib
 from scipy.ndimage.interpolation import zoom
 
-class AllDataset(Dataset):
-    def __init__(self, img_name, bbox_name, resize=64, augmenter=None):
+class DatasetGen(Dataset):
+    def __init__(self, img_name, bbox_name, label_names, resize=64, augmenter=None):
         super(AllDataset, self).__init__()
         if not isinstance(img_name, str): 
             raise TypeError('img_name is not a string.')
         if not isinstance(bbox_name, str):
             raise TypeError('bbox_name is not a string.')
+        if not isinstance(label_names, list):
+            raise TypeError('label_names is not a list.')
         if not isinstance(resize, int):
             raise TypeError('resize factor is not an integer.')
         
@@ -19,20 +21,20 @@ class AllDataset(Dataset):
         self.resize = resize
         self.aug = augmenter
         
-        self.bboxes = self.get_bboxes(bbox_name, ['gt_pos', 'rpn_pos', 'rpn_neg'])
-        assert (self.bboxes).shape[1] == 7, 'Bounding box dim mismatch.'
+        self.bboxes = self.get_bboxes(bbox_name, label_names)
+        assert (self.bboxes).shape[1] == 7, f'Bounding box dim mismatch, got {(self.bboxes).shape[1]}.'
 
     def __getitem__(self, index):
         bbox = self.bboxes[index, :-1]
         label = self.bboxes[index, -1] 
         img = np.swapaxes(nib.load(self.img_name).get_fdata(), -1, 0)#H*W*D -> D*H*W
-        assert img.ndim == 3, 'Input dimension mismatch.'
+        assert img.ndim == 3, f'Input dimension mismatch, , got {img.ndim}.'
         
         img = self.crop(img, bbox)
         factor = np.array([self.resize, self.resize, self.resize]) / np.array(img.shape)
         img = zoom(img, factor, order=0)
         
-        img = self.aug(image=np.swapaxes(img, -1, 0)) if self.aug is not None else img #D*H*W -> H*W*D
+        img = self.aug(image=np.swapaxes(img, -1, 0)) if self.aug is not None else np.swapaxes(img, -1, 0) #D*H*W -> H*W*D
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
         
         return torch.from_numpy(img), torch.from_numpy(np.array([label]))
@@ -42,6 +44,8 @@ class AllDataset(Dataset):
     
     @staticmethod
     def get_bboxes(bbox_name, label_names):
+        assert set(label_names).issubset(set(['gt_pos', 'rpn_pos', 'rpn_neg'])), f'Label Mismatch, got {label_names}.'
+        
         labelize = lambda record, label: np.concatenate((record, label*np.ones((record.shape[0],1)).astype(np.uint8)), axis=1)
         labeled = lambda record, label: labelize(record.reshape(0,6), label) if record.shape[0] == 0 else labelize(record, label)
         
@@ -70,15 +74,3 @@ class AllDataset(Dataset):
             'xt': end(xc, dx, image.shape[2])}
 
         return image[st['zs']:st['zt'], st['ys']:st['yt'], st['xs']:st['xt']]
-    
-
-class PosDataset(AllDataset):
-    def __init__(self, img_name, bbox_name, resize=64, augmenter=None):
-        super(PosDataset, self).__init__(img_name, bbox_name, resize, augmenter)
-        self.bboxes = self.get_bboxes(bbox_name, ['gt_pos', 'rpn_pos'])
-        
-
-class NegDataset(AllDataset):
-    def __init__(self, img_name, bbox_name, resize=64, augmenter=None):
-        super(NegDataset, self).__init__(img_name, bbox_name, resize, augmenter)
-        self.bboxes = self.get_bboxes(bbox_name, ['rpn_neg'])
