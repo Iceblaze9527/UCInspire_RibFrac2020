@@ -1,22 +1,17 @@
 import os
-import sys
 
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, recall_score
 from tqdm import tqdm
 
 import utils
 from metrics import metrics
 
-th = 0.5
-
 def train(loader, model, optim):
     model.train()
-    torch.autograd.set_detect_anomaly(True)
     
     losses = np.array([])
     y_true_all = np.array([])
@@ -25,7 +20,7 @@ def train(loader, model, optim):
     for idx, (X, y) in tqdm(enumerate(loader), total=len(loader), desc='Training'):
         optim.zero_grad()
         X = X.float().cuda() # [N, IC=1, D, H, W]
-        y = y.float().cuda() # foreground  = 1
+        y = y.float().cuda() # foreground = 1
         pred = model(X) # foreground logit proba [N, 1]
         
         loss = nn.BCEWithLogitsLoss()(pred, y)
@@ -36,8 +31,7 @@ def train(loader, model, optim):
         y_true_all = np.concatenate((y_true_all, y_true.reshape(-1)))
         y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
         
-        with torch.autograd.detect_anomaly():
-            loss.backward()
+        loss.backward()
         optim.step()
 
         del X, y, pred, loss
@@ -56,7 +50,7 @@ def evaluate(loader, model):
     with torch.no_grad():
         for idx, (X, y) in tqdm(enumerate(loader), total=len(loader), desc='Validating'):
             X = X.float().cuda() # [N, IC=1, D, H, W]
-            y = y.float().cuda() # foreground=1
+            y = y.float().cuda() # foreground = 1
             pred = model(X) # foreground logit proba [N, 1]
             
             loss = nn.BCEWithLogitsLoss()(pred, y)
@@ -73,13 +67,15 @@ def evaluate(loader, model):
     return losses, y_true_all, y_score_all
 
 
-def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_path): 
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
+def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, threshold):
+    ckpt_path = os.path.join(save_path, 'checkpoint.tar.gz')
     log_path = os.path.join(save_path, 'logs')
+    data_path = os.path.join(save_path, 'data')
     if not os.path.exists(log_path):
         os.makedirs(log_path)
-    
+    if not os.path.exists(data_path):
+        os.makedirs(data_path)
+        
     tb_writer = SummaryWriter(log_path)
     
     #TODO(2): logger module
@@ -90,10 +86,11 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
     #TODO(3): save criteria
     min_loss = 65536
     print('====================')
-    for epoch in tqdm(range(1, epochs + 1), desc = 'Epoch'):
+    for epoch in tqdm(range(1, epochs + 1), desc = 'Epoch'): 
         torch.cuda.synchronize()
-        epoch_start = utils.tic()
+        print(f'Epoch {epoch}:')
         print('start at: ', utils.timestamp())
+        epoch_start = utils.tic()
         
         train_losses, train_y_true, train_y_score = train(loader=train_loader, model=model, optim=optim)
         val_losses, val_y_true, val_y_score = evaluate(loader=val_loader, model=model)
@@ -101,14 +98,17 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
         scheduler.step()
         
         torch.cuda.synchronize()
-        epoch_end = utils.tic()
         print('end at: ', utils.timestamp())
+        epoch_end = utils.tic()
         print('epoch runtime: ', utils.delta_time(epoch_start, epoch_end))
        
         train_loss = np.average(train_losses)
-        train_acc, train_prc, train_rec, train_roc_auc, train_curve = metrics(train_y_true, train_y_score, threshold=0.5)
+        train_acc, train_prc, train_rec, train_roc_auc, train_curve = metrics(
+            train_y_true, train_y_score, threshold=threshold, csv_path = os.path.join(data_path, 'train_%02d.csv'%(epoch)))
+        
         val_loss = np.average(val_losses) 
-        val_acc, val_prc, val_rec, val_roc_auc, val_curve = metrics(val_y_true, val_y_score, threshold=0.5)
+        val_acc, val_prc, val_rec, val_roc_auc, val_curve = metrics(
+            val_y_true, val_y_score, threshold=threshold, csv_path = os.path.join(data_path, 'val_%02d.csv'%(epoch)))
         
         print('---------------------')
         print('Train Results:')
@@ -137,13 +137,13 @@ def run_model(train_loader, val_loader, model, epochs, optim, scheduler, save_pa
         #TODO(3): save criteria
         if val_loss < min_loss:
             min_loss = val_loss
-            ckpt_path = os.path.join(save_path, 'checkpoint.tar.gz')
             torch.save({'epoch': epoch, 'model_state_dict': model.state_dict(), 
                         'optim_state_dict': optim.state_dict(),}, ckpt_path)
         
         print('====================')
     
-    end = utils.tic()
     print('end running at: ', utils.timestamp())
+    end = utils.tic()
     print('overall runtime: ', utils.delta_time(start, end))
     print('====================')
+    tb_writer.close()

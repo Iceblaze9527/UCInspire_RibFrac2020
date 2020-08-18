@@ -8,7 +8,7 @@ import torch
 class Logger(object):
     def __init__(self,log_path):
         self.terminal = sys.stdout
-        self.log = open(log_path, "a")
+        self.log = open(log_path, "w")
 
     def write(self, message):
         self.terminal.write(message)

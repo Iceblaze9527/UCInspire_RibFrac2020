@@ -7,7 +7,7 @@ from scipy.ndimage.interpolation import zoom
 
 class DatasetGen(Dataset):
     def __init__(self, img_name, bbox_name, label_names, resize=64, augmenter=None):
-        super(AllDataset, self).__init__()
+        super(DatasetGen, self).__init__()
         if not isinstance(img_name, str): 
             raise TypeError('img_name is not a string.')
         if not isinstance(bbox_name, str):
@@ -31,8 +31,8 @@ class DatasetGen(Dataset):
         assert img.ndim == 3, f'Input dimension mismatch, , got {img.ndim}.'
         
         img = self.crop(img, bbox)
-        factor = np.array([self.resize, self.resize, self.resize]) / np.array(img.shape)
-        img = zoom(img, factor, order=0)
+        length = int((max(img.shape)+1)//2 * 2)#nearest even number
+        img = zoom(self.pad(img, length), self.resize/length, order=0)
         
         img = self.aug(image=np.swapaxes(img, -1, 0)) if self.aug is not None else np.swapaxes(img, -1, 0) #D*H*W -> H*W*D
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
@@ -74,3 +74,15 @@ class DatasetGen(Dataset):
             'xt': end(xc, dx, image.shape[2])}
 
         return image[st['zs']:st['zt'], st['ys']:st['yt'], st['xs']:st['xt']]
+    
+    @staticmethod
+    def pad(image, length):
+        start = lambda dim: int(length//2 - dim//2)
+        end = lambda dim: start(dim) + dim
+        
+        z, y, x = image.shape
+        canvas = np.zeros((length, length, length))
+        canvas[start(z):end(z), start(y):end(y), start(x):end(x)] = image
+        
+        return canvas
+        
