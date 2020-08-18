@@ -78,7 +78,7 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         
     tb_writer = SummaryWriter(log_path)
     
-    #TODO(2): logger module
+    #TODO(3): logger module
     print('====================')
     print('start running at: ', utils.timestamp())
     start = utils.tic()
@@ -125,7 +125,8 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         print('Precision:', val_prc)
         print('Recall:', val_rec)
         print('ROC AUC:', val_roc_auc)
-
+        
+        #TODO(3) tensorboard logger
         tb_writer.add_scalar('learning_rate', optim.param_groups[0]['lr'], global_step=epoch)
         tb_writer.add_scalars('Loss', {'train_loss': train_loss, 'val_loss': val_loss}, global_step=epoch)
         tb_writer.add_scalars('Accuracy', {'train_acc': train_acc, 'val_acc': val_acc}, global_step=epoch)

@@ -3,8 +3,9 @@ import time
 import datetime
 
 import torch
+from torch.nn import DataParallel
 
-##TODO(2)
+##TODO(3) logger module
 class Logger(object):
     def __init__(self,log_path):
         self.terminal = sys.stdout
@@ -20,11 +21,28 @@ class Logger(object):
         #you might want to specify some extra behavior here.
         pass
 
+
 def set_global_seed(seed=15):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True 
     torch.backends.cudnn.benchmark = False
+
+    
+def gpu_manager(model):
+    device_cnt = torch.cuda.device_count()
+    if device_cnt > 0:
+        if device_cnt == 1:
+            print('Only 1 GPU is available.')
+        else:
+            print(f"{device_cnt} GPUs are available.")
+            model = DataParallel(model)
+        model = model.cuda()
+    else:
+        print('Only CPU is available.')
+        
+    return model
+
 
 timestamp = lambda: time.asctime(time.localtime(time.time()))
 tic = lambda: time.time()

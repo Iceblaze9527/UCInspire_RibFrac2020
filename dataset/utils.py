@@ -7,7 +7,6 @@ import numpy as np
 from dataset.generator import DatasetGen
 
 def get_dataset(img_path, bbox_path, label_names, resize=64, augmenter=None):
-    
     idx = lambda name: re.sub(r'\D', '', name)
     get_names = lambda path: sorted([os.path.join(path, name) for name in os.listdir(path)], key=idx)
     
@@ -19,6 +18,7 @@ def get_dataset(img_path, bbox_path, label_names, resize=64, augmenter=None):
         datasets.append(DatasetGen(img_name, bbox_name, label_names, resize, augmenter))
     
     return ConcatDataset(datasets)
+
 
 def get_loader(img_path, bbox_path, loader_mode, sample_mode, resize=64, augmenter=None, batch_size=1, 
                sample_size=800, pos_rate=0.2, num_workers=4):
@@ -44,7 +44,8 @@ def get_loader(img_path, bbox_path, loader_mode, sample_mode, resize=64, augment
     
     else:
         if loader_mode == 'test':
-            pos_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos'], resize = resize, augmenter = augmenter)
+            pos_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos'], 
+                                      resize = resize, augmenter = augmenter)
         else:
             pos_dataset = get_dataset(img_path, bbox_path, label_names = ['gt_pos', 'rpn_pos'], 
                                   resize = resize, augmenter = augmenter)

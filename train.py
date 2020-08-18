@@ -2,10 +2,8 @@ import os
 import sys
 
 import torch
-import imgaug.augmenters as iaa
-##TODO(3)
-from torch.nn import DataParallel
 import numpy as np
+import imgaug.augmenters as iaa
 
 from architecture import FeatureNet
 from dataset.utils import get_dataset, get_loader
@@ -17,20 +15,24 @@ import utils
 os.environ['CUDA_VISIBLE_DEVICES'] = '6,7'
 seed = 15
 
-#checkpoint path (if any)
-cont = False
+#resume training (if any)
+is_cont = False
 # ckpt_path = './checkpoints/checkpoint_1/checkpoint.tar.gz'
 
 #data params
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox/'
+
 resize = 32
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
 num_workers = 4
 
+train_sample_mode = 'sampled'
 train_sample_size = 800
 train_pos_rate = 0.5
+
+val_sample_mode = 'sampled'
 val_sample_size = 200
 val_pos_rate = 0.5
 
@@ -52,31 +54,17 @@ lr_gamma = 0.1
 save_path = './checkpoints/checkpoint_2'
 
 def main():
-    assert cont in [True, False], 'Scratch/Continuous mode not specified.'
-
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     
     utils.set_global_seed(seed)
-    #TODO(2) change to logging
+    #TODO(3) change to logging
     sys.stdout = utils.Logger(os.path.join(save_path, 'log'))
     
     model = FeatureNet(in_channels=1, out_channels=1)
-    ##TODO(3) utils.gpu_manager
-    device_cnt = torch.cuda.device_count()
-    if device_cnt > 0:
-        if device_cnt == 1:
-            print('Only 1 GPU is available.')
-        else:
-            print(f"{device_cnt} GPUs are available.")
-            model = DataParallel(model)
-        model = model.cuda()
-    else:
-        print('Only CPU is available.')
+    model = utils.gpu_manager(model)
 
-    if cont == True:
-        assert ckpt_path, 'Checkpoint path not specified.'
-        
+    if is_cont == True:
         checkpoint = torch.load(ckpt_path)
         model.load_state_dict(checkpoint['model_state_dict'])
         optim = torch.optim.Adam(model.parameters())
@@ -93,16 +81,16 @@ def main():
         iaa.Affine(scale=scale),
         iaa.Affine(translate_percent=translation)])
 
-    train_loader = get_loader(img_path, bbox_path, loader_mode='train', sample_mode = 'sampled', 
+    train_loader = get_loader(img_path, bbox_path, loader_mode='train', sample_mode=train_sample_mode, 
                               resize=resize, augmenter=aug, batch_size=batch_size, 
-                              sample_size=train_sample_size, pos_rate=train_pos_rate, num_workers = num_workers)
+                              sample_size=train_sample_size, pos_rate=train_pos_rate, num_workers=num_workers)
     
-    val_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = 'sampled', 
+    val_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode=val_sample_mode, 
                             resize=resize, augmenter=aug, batch_size=batch_size, 
-                            sample_size=val_sample_size, pos_rate=val_pos_rate, num_workers = num_workers)
+                            sample_size=val_sample_size, pos_rate=val_pos_rate, num_workers=num_workers)
 
-    run(train_loader = train_loader, val_loader = val_loader, model = model, epochs = epochs, 
-              optim = optim, scheduler = scheduler, save_path = save_path, threshold = train_pos_rate)
+    run(train_loader=train_loader, val_loader=val_loader, model=model, epochs=epochs, 
+              optim=optim, scheduler=scheduler, save_path=save_path, threshold=train_pos_rate)
     
 if __name__ == '__main__':
     main()
