@@ -135,6 +135,10 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         tb_writer.add_scalars('ROC AUC', {'train_roc_auc': train_roc_auc, 'val_roc_auc': val_roc_auc}, global_step=epoch)
         tb_writer.add_figure('ROC curves', [train_curve, val_curve], global_step=epoch)##
         
+        for name, value in model.named_parameters():
+            tb_writer.add_histogram(name, value.data.cpu().numpy(), global_step=epoch)
+            tb_writer.add_histogram(name + '/grad', value.grad.data.cpu().numpy(),global_step=epoch)
+        
         #TODO(3): save criteria
         if val_loss < min_loss:
             min_loss = val_loss

@@ -8,14 +8,8 @@ from scipy.ndimage.interpolation import zoom
 class DatasetGen(Dataset):
     def __init__(self, img_name, bbox_name, label_names, resize=64, augmenter=None):
         super(DatasetGen, self).__init__()
-        if not isinstance(img_name, str): 
-            raise TypeError('img_name is not a string.')
-        if not isinstance(bbox_name, str):
-            raise TypeError('bbox_name is not a string.')
         if not isinstance(label_names, list):
             raise TypeError('label_names is not a list.')
-        if not isinstance(resize, int):
-            raise TypeError('resize factor is not an integer.')
         
         self.img_name = img_name
         self.resize = resize
@@ -27,14 +21,14 @@ class DatasetGen(Dataset):
     def __getitem__(self, index):
         bbox = self.bboxes[index, :-1]
         label = self.bboxes[index, -1] 
-        img = np.swapaxes(nib.load(self.img_name).get_fdata(), -1, 0)#H*W*D -> D*H*W
+        img = nib.load(self.img_name).get_fdata()#H*W*D
         assert img.ndim == 3, f'Input dimension mismatch, , got {img.ndim}.'
         
-        img = self.crop(img, bbox)
-        length = int((max(img.shape)+1)//2 * 2)#nearest even number
-        img = zoom(self.pad(img, length), self.resize/length, order=0)
+        img = self.crop(img, bbox, self.resize)#H*W*D
+#         length = int((max(img.shape)+1)//2 * 2)#nearest even number
+#         img = zoom(img, self.resize/length, order=0)
         
-        img = self.aug(image=np.swapaxes(img, -1, 0)) if self.aug is not None else np.swapaxes(img, -1, 0) #D*H*W -> H*W*D
+        img = self.aug(image=img) if self.aug is not None else img
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
         
         return torch.from_numpy(img), torch.from_numpy(np.array([label]))
@@ -61,28 +55,43 @@ class DatasetGen(Dataset):
         return bbox_data
     
     @staticmethod
-    def crop(image, bbox):
-        start = lambda center, length: int(max(np.floor(center - length/2), 0))
-        end = lambda center, length, max_len: int(min(np.ceil(center + length/2), max_len))
-        
-        zc, yc, xc, dz, dy, dx = bbox
-        st = {'zs': start(zc, dz),
-            'zt': end(zc, dz, image.shape[0]),
-            'ys': start(yc, dy),
-            'yt': end(yc, dy, image.shape[1]),
-            'xs': start(xc, dx),
-            'xt': end(xc, dx, image.shape[2])}
+    def crop(image, bbox, length):
+        start = lambda center, length: int(np.floor(center - length/2))
+        end = lambda center, length: int(np.floor(center + length/2))
 
-        return image[st['zs']:st['zt'], st['ys']:st['yt'], st['xs']:st['xt']]
-    
-    @staticmethod
-    def pad(image, length):
-        start = lambda dim: int(length//2 - dim//2)
-        end = lambda dim: start(dim) + dim
+        start_crop = lambda center, length: int(max(start(center, length), 0))
+        end_crop = lambda center, length, max_len: int(min(end(center, length), max_len))
+
+        zc, yc, xc, dz, dy, dx = bbox
+
+        st = {'zs': start_crop(zc, length),
+            'zt': end_crop(zc, length, image.shape[2]),
+            'ys': start_crop(yc, length),
+            'yt': end_crop(yc, length, image.shape[1]),
+            'xs': start_crop(xc, length),
+            'xt': end_crop(xc, length, image.shape[0])}
+
+        img = image[st['xs']:st['xt'], st['ys']:st['yt'], st['zs']:st['zt']]
+
+        img = np.pad(img, ((abs(start(xc, length)),0),(0,0),(0,0)), 'constant') if start(xc, length) < 0 else img
+        img = np.pad(img, ((0,  abs(end(xc, length)) - image.shape[0]),(0,0),(0,0)), 'constant') if end(xc, length) > image.shape[0] else img
+
+        img = np.pad(img, ((0,0),(abs(start(yc, length)),0),(0,0)), 'constant') if start(yc, length) < 0 else img
+        img = np.pad(img, ((0,0),(0,  abs(end(yc, length)) - image.shape[1]),(0,0)), 'constant') if end(yc, length) > image.shape[1] else img
+
+        img = np.pad(img, ((0,0),(0,0),(abs(start(zc, length)),0)), 'constant') if start(zc, length) < 0 else img
+        img = np.pad(img, ((0,0),(0,0),(0,  abs(end(zc, length)) - image.shape[2])), 'constant') if end(zc, length) > image.shape[2] else img
+
+        return img
         
-        z, y, x = image.shape
-        canvas = np.zeros((length, length, length))
-        canvas[start(z):end(z), start(y):end(y), start(x):end(x)] = image
+#     @staticmethod
+#     def pad(image, length):
+#         start = lambda dim: int(length//2 - dim//2)
+#         end = lambda dim: start(dim) + dim
         
-        return canvas
+#         z, y, x = image.shape
+#         canvas = np.zeros((length, length, length))
+#         canvas[start(z):end(z), start(y):end(y), start(x):end(x)] = image
+        
+#         return canvas
         

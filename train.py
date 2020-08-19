@@ -23,7 +23,7 @@ is_cont = False
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox/'
 
-resize = 32
+resize = 64
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
 num_workers = 4
@@ -41,17 +41,17 @@ epochs = 16
 batch_size = 64
 
 #optim params
-lr = 1e-4
+lr = 5e-5
 betas = (0.9, 0.999)
 eps = 1e-08
 weight_decay = 1e-4
 
 #lr scheduler params
-milestones = [10, 20]
+milestones = [20, 30]
 lr_gamma = 0.1
 
 #save params
-save_path = './checkpoints/checkpoint_2'
+save_path = './checkpoints/checkpoint_3'
 
 def main():
     if not os.path.exists(save_path):
