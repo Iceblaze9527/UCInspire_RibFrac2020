@@ -1,0 +1,6 @@
+**/bbox
+**/checkpoints
+**/masks
+**/.ipynb_check*
+**/*.pyc
+**/dataset/*.pyc
