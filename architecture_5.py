@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 bn_momentum = 0.1
 
@@ -96,9 +97,10 @@ class FeatureNet(nn.Module):
             nn.BatchNorm3d(64),
             nn.ReLU(inplace=True))
         
-        self.fc1=nn.Linear(128*16*16*16, 512)##new
-        self.fc2=nn.Linear(512, 128)##new
-        self.fc3=nn.Linear(128, out_channels)##new 
+        self.gap=nn.AdaptiveAvgPool3d((None,1,1))#global average pooling
+        
+        self.fc1=nn.Linear(128*16, 128)##new
+        self.fc2=nn.Linear(128, out_channels)##new 
     
     def forward(self, x):
         out = self.preBlock(x)#16
@@ -121,9 +123,10 @@ class FeatureNet(nn.Module):
         rev2 = self.path2(comb3)
         comb2 = self.back2(torch.cat((rev2, out2), 1))#64+64
         
-        flatten = comb2.view(-1, 128*16*16*16)
-        fc2 = self.fc1(flatten)
-        fc3 = self.fc2(fc2)
-        out = self.fc3(fc3)
+        gap = self.gap(comb2)
+        
+        x = gap.view(-1, 128*16)
+        x = F.relu(self.fc1(x), inplace=True)
+        out = self.fc2(x)
         
         return out

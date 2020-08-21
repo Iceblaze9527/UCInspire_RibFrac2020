@@ -5,19 +5,19 @@ import torch
 import numpy as np
 import imgaug.augmenters as iaa
 
-from architecture import FeatureNet
+from architecture_5 import FeatureNet
 from dataset.utils import get_dataset, get_loader
 from oper import run
 import utils
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 seed = 15
 
 #resume training (if any)
 is_cont = False
-# ckpt_path = './checkpoints/checkpoint_1/checkpoint.tar.gz'
+# ckpt_path = './checkpoints/checkpoint_3/checkpoint.tar.gz'
 
 #data params
 img_path = '/home/yutongx/src_data/images/'
@@ -26,7 +26,7 @@ bbox_path = '/home/yutongx/src_data/bbox/'
 resize = 64
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
-num_workers = 4
+num_workers = 8
 
 train_sample_mode = 'sampled'
 train_sample_size = 800
@@ -37,21 +37,21 @@ val_sample_size = 200
 val_pos_rate = 0.5
 
 #training params
-epochs = 16
+epochs = 64
 batch_size = 64
 
 #optim params
 lr = 5e-5
 betas = (0.9, 0.999)
 eps = 1e-08
-weight_decay = 1e-4
+weight_decay = 0.1
 
 #lr scheduler params
-milestones = [20, 30]
-lr_gamma = 0.1
+milestones = [24, 48]
+lr_gamma = 0.5
 
 #save params
-save_path = './checkpoints/checkpoint_3'
+save_path = './checkpoints/checkpoint_6'
 
 def main():
     if not os.path.exists(save_path):

@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from architecture import FeatureNet
+from architecture_5 import FeatureNet
 from dataset.utils import get_dataset, get_loader
 from oper import evaluate
 import utils
@@ -13,14 +13,14 @@ from metrics import metrics
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
 #data params
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox/'
 resize = 64
-num_workers = 4
+num_workers = 0
 
 test_sample_mode = 'sampled'
 test_sample_size = 2000
@@ -30,12 +30,13 @@ test_pos_rate = 0.5
 batch_size = 64
 
 #save params
-save_path = './checkpoints/checkpoint_3/'
+save_path = '/home/yxy/disk/Repository/FeatureNet/checkpoints/checkpoint_5/'
+out_path = './checkpoints/checkpoint_5/'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'
     
-    test_path = os.path.join(save_path, 'test')
+    test_path = os.path.join(out_path, 'test')
     data_path = os.path.join(test_path, 'data')
     if not os.path.exists(test_path):
         os.makedirs(test_path)
@@ -61,7 +62,8 @@ def main():
     print('start running at: ', utils.timestamp())
     start = utils.tic()
     
-    test_losses, test_y_true, test_y_score = evaluate(loader=test_loader, model=model)
+    pos_weight = int((1-test_pos_rate)/test_pos_rate)
+    test_losses, test_y_true, test_y_score = evaluate(loader=test_loader, model=model, pos_weight=pos_weight)
     
     print('end running at: ', utils.timestamp())
     end = utils.tic()

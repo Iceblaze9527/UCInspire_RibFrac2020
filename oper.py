@@ -10,7 +10,7 @@ from tqdm import tqdm
 import utils
 from metrics import metrics
 
-def train(loader, model, optim):
+def train(loader, model, optim, pos_weight):
     model.train()
     
     losses = np.array([])
@@ -23,7 +23,7 @@ def train(loader, model, optim):
         y = y.float().cuda() # foreground = 1
         pred = model(X) # foreground logit proba [N, 1]
         
-        loss = nn.BCEWithLogitsLoss()(pred, y)
+        loss = nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(pos_weight))(pred, y)
         y_true = y.detach().cpu().numpy().astype(np.uint8)
         y_score = torch.sigmoid(pred).detach().cpu().numpy()
         
@@ -40,7 +40,7 @@ def train(loader, model, optim):
     return losses, y_true_all, y_score_all
 
 
-def evaluate(loader, model):
+def evaluate(loader, model, pos_weight):
     model.eval()
 
     losses = np.array([])
@@ -53,7 +53,7 @@ def evaluate(loader, model):
             y = y.float().cuda() # foreground = 1
             pred = model(X) # foreground logit proba [N, 1]
             
-            loss = nn.BCEWithLogitsLoss()(pred, y)
+            loss = nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(pos_weight))(pred, y)
             y_true = y.detach().cpu().numpy().astype(np.uint8)
             y_score = torch.sigmoid(pred).detach().cpu().numpy()
 
@@ -78,6 +78,8 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         
     tb_writer = SummaryWriter(log_path)
     
+    pos_weight = int((1-threshold)/threshold)
+    
     #TODO(3): logger module
     print('====================')
     print('start running at: ', utils.timestamp())
@@ -92,8 +94,8 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         print('start at: ', utils.timestamp())
         epoch_start = utils.tic()
         
-        train_losses, train_y_true, train_y_score = train(loader=train_loader, model=model, optim=optim)
-        val_losses, val_y_true, val_y_score = evaluate(loader=val_loader, model=model)
+        train_losses, train_y_true, train_y_score = train(loader=train_loader, model=model, optim=optim, pos_weight=pos_weight)
+        val_losses, val_y_true, val_y_score = evaluate(loader=val_loader, model=model, pos_weight=pos_weight)
         
         scheduler.step()
         
