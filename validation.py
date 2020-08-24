@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from architecture_5 import FeatureNet
+from architecture import FeatureNet
 from dataset.utils import get_dataset, get_loader
 from oper import evaluate
 import utils
@@ -16,27 +16,29 @@ from metrics import metrics
 os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
+#model params
+is_multi = False
+
 #data params
 img_path = '/home/yutongx/src_data/images/'
-bbox_path = '/home/yutongx/src_data/bbox/'
+bbox_path = '/home/yutongx/src_data/bbox_multi/'
 resize = 64
 num_workers = 0
 
 test_sample_mode = 'sampled'
-test_sample_size = 2000
+test_sample_size = 500
 test_pos_rate = 0.5
 
 #test params
 batch_size = 64
 
 #save params
-save_path = '/home/yxy/disk/Repository/FeatureNet/checkpoints/checkpoint_5/'
-out_path = './checkpoints/checkpoint_5/'
+save_path = './checkpoints/checkpoint_6/'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'
     
-    test_path = os.path.join(out_path, 'test')
+    test_path = os.path.join(save_path, 'test')
     data_path = os.path.join(test_path, 'data')
     if not os.path.exists(test_path):
         os.makedirs(test_path)
@@ -47,13 +49,17 @@ def main():
     #TODO(3) logger module
     sys.stdout = utils.Logger(os.path.join(test_path, 'log'))
     
-    model = FeatureNet(in_channels=1, out_channels=1)  
+    if is_multi == False:
+        model = FeatureNet(in_channels=1, out_channels=1)
+    else:
+        model = FeatureNet(in_channels=1, out_channels=5)
+    
     model = utils.gpu_manager(model)
     
     checkpoint = torch.load(os.path.join(save_path, 'checkpoint.tar.gz'))
     model.load_state_dict(checkpoint['model_state_dict'])
     
-    test_loader = get_loader(img_path, bbox_path, loader_mode='test', sample_mode = test_sample_mode, 
+    test_loader = get_loader(img_path, bbox_path, loader_mode='test', sample_mode = test_sample_mode, is_multi=is_multi,
                              resize=resize, augmenter=None, batch_size=batch_size, 
                              sample_size=test_sample_size, pos_rate=test_pos_rate, num_workers=num_workers)
 
@@ -63,15 +69,17 @@ def main():
     start = utils.tic()
     
     pos_weight = int((1-test_pos_rate)/test_pos_rate)
-    test_losses, test_y_true, test_y_score = evaluate(loader=test_loader, model=model, pos_weight=pos_weight)
+    test_data = evaluate(loader=test_loader, model=model, pos_weight=pos_weight)
     
     print('end running at: ', utils.timestamp())
     end = utils.tic()
     print('overall runtime: ', utils.delta_time(start, end))
     
+    test_losses, *test_results = test_data
     test_loss = np.average(test_losses)
-    test_acc, test_prc, test_rec, test_roc_auc, test_curve = metrics(
-        test_y_true, test_y_score, threshold=test_pos_rate, csv_path=os.path.join(data_path, 'test.csv'))
+    test_acc, test_prc, test_rec, test_roc_auc, test_curve = metrics(test_results, 
+                                                                     threshold=test_pos_rate, 
+                                                                     csv_path=os.path.join(data_path, 'test.csv'))
 
     print('---------------------')
     print('Test Results:')

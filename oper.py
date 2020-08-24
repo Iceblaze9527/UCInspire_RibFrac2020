@@ -14,20 +14,25 @@ def train(loader, model, optim, pos_weight):
     model.train()
     
     losses = np.array([])
+    y_name_all = []
     y_true_all = np.array([])
     y_score_all = np.array([])
     
     for idx, (X, y) in tqdm(enumerate(loader), total=len(loader), desc='Training'):
         optim.zero_grad()
+        
+        y_name = y[1]
+        y = y[0]
         X = X.float().cuda() # [N, IC=1, D, H, W]
         y = y.float().cuda() # foreground = 1
         pred = model(X) # foreground logit proba [N, 1]
         
-        loss = nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(pos_weight))(pred, y)
+        loss = nn.BCEWithLogitsLoss(reduction='mean', pos_weight = torch.tensor(pos_weight))(pred, y)
         y_true = y.detach().cpu().numpy().astype(np.uint8)
         y_score = torch.sigmoid(pred).detach().cpu().numpy()
         
         losses = np.concatenate((losses, loss.detach().cpu().numpy().reshape(-1)))
+        y_name_all.extend(y_name)##
         y_true_all = np.concatenate((y_true_all, y_true.reshape(-1)))
         y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
         
@@ -37,34 +42,38 @@ def train(loader, model, optim, pos_weight):
         del X, y, pred, loss
         torch.cuda.empty_cache()
     
-    return losses, y_true_all, y_score_all
+    return losses, y_name_all, y_true_all, y_score_all
 
 
 def evaluate(loader, model, pos_weight):
     model.eval()
-
+    
     losses = np.array([])
+    y_name_all = []
     y_true_all = np.array([])
     y_score_all = np.array([])
     
     with torch.no_grad():
         for idx, (X, y) in tqdm(enumerate(loader), total=len(loader), desc='Validating'):
+            y_name = y[1]
+            y = y[0]
             X = X.float().cuda() # [N, IC=1, D, H, W]
             y = y.float().cuda() # foreground = 1
             pred = model(X) # foreground logit proba [N, 1]
             
-            loss = nn.BCEWithLogitsLoss(reduction='mean', pos_weight=torch.tensor(pos_weight))(pred, y)
+            loss = nn.BCEWithLogitsLoss(reduction='mean', pos_weight = torch.tensor(pos_weight))(pred, y)
             y_true = y.detach().cpu().numpy().astype(np.uint8)
             y_score = torch.sigmoid(pred).detach().cpu().numpy()
 
             losses = np.concatenate((losses, loss.detach().cpu().numpy().reshape(-1)))
+            y_name_all.extend(y_name)##
             y_true_all = np.concatenate((y_true_all, y_true.reshape(-1)))
             y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
 
             del X, y, pred, loss
             torch.cuda.empty_cache()
     
-    return losses, y_true_all, y_score_all
+    return losses, y_name_all, y_true_all, y_score_all
 
 
 def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, threshold):
@@ -94,8 +103,8 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         print('start at: ', utils.timestamp())
         epoch_start = utils.tic()
         
-        train_losses, train_y_true, train_y_score = train(loader=train_loader, model=model, optim=optim, pos_weight=pos_weight)
-        val_losses, val_y_true, val_y_score = evaluate(loader=val_loader, model=model, pos_weight=pos_weight)
+        train_data = train(loader=train_loader, model=model, optim=optim, pos_weight=pos_weight)
+        val_data = evaluate(loader=val_loader, model=model, pos_weight=pos_weight)
         
         scheduler.step()
         
@@ -103,14 +112,18 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         print('end at: ', utils.timestamp())
         epoch_end = utils.tic()
         print('epoch runtime: ', utils.delta_time(epoch_start, epoch_end))
-       
+        
+        train_losses, *train_results = train_data
+        val_losses, *val_results = val_data
+        
         train_loss = np.average(train_losses)
-        train_acc, train_prc, train_rec, train_roc_auc, train_curve = metrics(
-            train_y_true, train_y_score, threshold=threshold, csv_path = os.path.join(data_path, 'train_%02d.csv'%(epoch)))
+        train_metrics = metrics(train_results, threshold=threshold, csv_path = os.path.join(data_path, 'train_%02d.csv'%(epoch)))
         
         val_loss = np.average(val_losses) 
-        val_acc, val_prc, val_rec, val_roc_auc, val_curve = metrics(
-            val_y_true, val_y_score, threshold=threshold, csv_path = os.path.join(data_path, 'val_%02d.csv'%(epoch)))
+        val_metrics = metrics(val_results, threshold=threshold, csv_path = os.path.join(data_path, 'val_%02d.csv'%(epoch)))
+        
+        train_acc, train_prc, train_rec, train_roc_auc, train_curve = train_metrics
+        val_acc, val_prc, val_rec, val_roc_auc, val_curve = val_metrics
         
         print('---------------------')
         print('Train Results:')
@@ -135,7 +148,7 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         tb_writer.add_scalars('Precision', {'train_precision': train_prc, 'val_precision': val_prc}, global_step=epoch)
         tb_writer.add_scalars('Recall', {'train_recall': train_rec, 'val_recall': val_rec}, global_step=epoch)
         tb_writer.add_scalars('ROC AUC', {'train_roc_auc': train_roc_auc, 'val_roc_auc': val_roc_auc}, global_step=epoch)
-        tb_writer.add_figure('ROC curves', [train_curve, val_curve], global_step=epoch)##
+        tb_writer.add_figure('ROC curves', [train_curve, val_curve], global_step=epoch)
         
         for name, value in model.named_parameters():
             tb_writer.add_histogram(name, value.data.cpu().numpy(), global_step=epoch)

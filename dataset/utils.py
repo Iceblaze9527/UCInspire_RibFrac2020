@@ -6,7 +6,7 @@ import numpy as np
 
 from dataset.generator import DatasetGen
 
-def get_dataset(img_path, bbox_path, label_names, resize=64, augmenter=None):
+def get_dataset(img_path, bbox_path, label_names, is_multi=False, resize=64, augmenter=None):
     idx = lambda name: re.sub(r'\D', '', name)
     get_names = lambda path: sorted([os.path.join(path, name) for name in os.listdir(path)], key=idx)
     
@@ -15,12 +15,12 @@ def get_dataset(img_path, bbox_path, label_names, resize=64, augmenter=None):
     
     datasets = []
     for img_name, bbox_name in zip(img_names, bbox_names):
-        datasets.append(DatasetGen(img_name, bbox_name, label_names, resize, augmenter))
+        datasets.append(DatasetGen(img_name, bbox_name, label_names, is_multi, resize, augmenter))
     
     return ConcatDataset(datasets)
 
 
-def get_loader(img_path, bbox_path, loader_mode, sample_mode, resize=64, augmenter=None, batch_size=1, 
+def get_loader(img_path, bbox_path, loader_mode, sample_mode, is_multi=False, resize=64, augmenter=None, batch_size=1, 
                sample_size=800, pos_rate=0.2, num_workers=4):
     
     assert loader_mode in ['train', 'val', 'test'], f'Invalid mode, got {loader_mode}.'
@@ -35,22 +35,23 @@ def get_loader(img_path, bbox_path, loader_mode, sample_mode, resize=64, augment
     
     if sample_mode == 'all':
         if loader_mode == 'test':
-            dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos', 'rpn_neg'], 
+            dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos', 'rpn_neg'], is_multi=is_multi,
                                   resize = resize, augmenter = augmenter)
         else:
-            dataset = get_dataset(img_path, bbox_path, label_names = ['gt_pos', 'rpn_pos', 'rpn_neg'], 
+            dataset = get_dataset(img_path, bbox_path, label_names = ['gt_pos', 'rpn_pos', 'rpn_neg'], is_multi=is_multi,
                                   resize = resize, augmenter = augmenter)
         print(''.join((loader_mode, ' dataset size: ', str(len(dataset)))))
     
     else:
         if loader_mode == 'test':
-            pos_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos'], 
+            pos_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos'], is_multi=is_multi,
                                       resize = resize, augmenter = augmenter)
         else:
-            pos_dataset = get_dataset(img_path, bbox_path, label_names = ['gt_pos', 'rpn_pos'], 
+            pos_dataset = get_dataset(img_path, bbox_path, label_names = ['gt_pos', 'rpn_pos'], is_multi=is_multi,
                                   resize = resize, augmenter = augmenter)
         
-        neg_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_neg'], resize = resize, augmenter = augmenter)
+        neg_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_neg'], is_multi=is_multi, 
+                                  resize = resize, augmenter = augmenter)
         
         pos_idx = np.random.randint(len(pos_dataset), size = int(sample_size * pos_rate))
         pos_dataset = Subset(pos_dataset, pos_idx)

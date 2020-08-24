@@ -1,23 +1,22 @@
-import csv
+import pandas as pd
 
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
 
-def metrics(y_true, y_score, threshold, csv_path):
+def metrics(results, threshold, csv_path):
+    y_name, y_true, y_score = results
+    
     y_pred = np.where(y_score > threshold, 1, 0).astype(np.uint8)
 
     accuracy = accuracy_score(y_true, y_pred)
     precision = precision_score(y_true, y_pred)
     recall = recall_score(y_true, y_pred)
-
     roc_auc = roc_auc_score(y_true, y_score)
     fpr, tpr, _ = roc_curve(y_true, y_score)
-
-    with open(csv_path, 'w', newline='') as csv_file:
-        csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(['No.', 'y_true', 'y_score', 'y_pred'])
-        csv_writer.writerows(np.stack([range(1, y_true.shape[0] + 1), y_true, y_score, y_pred], axis=1))
+    
+    df = pd.DataFrame({'public_id': y_name, 'proba': y_score, 'y_pred': y_pred, 'y_true': y_true})
+    df.to_csv(csv_path, index=False, sep=',')
 
     fig, ax = plt.subplots()
     ax.plot(fpr, tpr)

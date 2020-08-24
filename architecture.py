@@ -123,7 +123,7 @@ class FeatureNet(nn.Module):
         rev2 = self.path2(comb3)
         comb2 = self.back2(torch.cat((rev2, out2), 1))#64+64
         
-        gap = self.gap(comb2)
+        gap = self.gap(F.relu(comb2))
         
         x = gap.view(-1, 128*16)
         x = F.relu(self.fc1(x), inplace=True)
