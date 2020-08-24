@@ -32,7 +32,7 @@ def train(loader, model, optim, pos_weight):
         y_score = torch.sigmoid(pred).detach().cpu().numpy()
         
         losses = np.concatenate((losses, loss.detach().cpu().numpy().reshape(-1)))
-        y_name_all.extend(y_name)##
+        y_name_all.extend(y_name)
         y_true_all = np.concatenate((y_true_all, y_true.reshape(-1)))
         y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
         
@@ -66,7 +66,7 @@ def evaluate(loader, model, pos_weight):
             y_score = torch.sigmoid(pred).detach().cpu().numpy()
 
             losses = np.concatenate((losses, loss.detach().cpu().numpy().reshape(-1)))
-            y_name_all.extend(y_name)##
+            y_name_all.extend(y_name)
             y_true_all = np.concatenate((y_true_all, y_true.reshape(-1)))
             y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
 
