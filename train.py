@@ -2,22 +2,23 @@ import os
 import sys
 
 import torch
-import numpy as np
+import torch.nn as nn
+
 import imgaug.augmenters as iaa
 
-from architecture import FeatureNet
+from architecture_gap import FeatureNet
 from dataset.utils import get_dataset, get_loader
 from oper import run
 import utils
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6,7'
 seed = 15
 
 #model params
 is_multi = False
-is_cont = False#resume training (if any)
+is_cont = False #resume training (if any)
 #ckpt_path = './checkpoints/checkpoint_3/checkpoint.tar.gz'
 
 #data params
@@ -27,19 +28,19 @@ bbox_path = '/home/yutongx/src_data/bbox_multi/'
 resize = 64
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
-num_workers = 8
+num_workers = 0
 
 train_sample_mode = 'sampled'
-train_sample_size = 800
+train_sample_size = 16
 train_pos_rate = 0.5
 
 val_sample_mode = 'sampled'
-val_sample_size = 200
+val_sample_size = 16
 val_pos_rate = 0.5
 
 #training params
-epochs = 32
-batch_size = 64
+epochs = 8
+batch_size = 16
 
 #optim params
 lr = 5e-5
@@ -52,7 +53,7 @@ milestones = [24, 48]
 lr_gamma = 0.5
 
 #save params
-save_path = './checkpoints/checkpoint_8'
+save_path = './checkpoints/checkpoint_9'
 
 def main():
     if not os.path.exists(save_path):
@@ -64,8 +65,10 @@ def main():
     
     if is_multi == False:
         model = FeatureNet(in_channels=1, out_channels=1)
+        criterion = nn.BCEWithLogitsLoss(reduction='mean')
     else:
-        model = FeatureNet(in_channels=1, out_channels=5)
+        model = FeatureNet(in_channels=1, out_channels=6)
+        criterion = nn.CrossEntropyLoss(reduction='mean', ignore_index = -1)
     
     model = utils.gpu_manager(model)
 
@@ -79,7 +82,7 @@ def main():
     else:
         optim = torch.optim.Adam(model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
         print('Training from scratch.')
-
+    
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=milestones, gamma=lr_gamma)
     
     aug = iaa.SomeOf((0, None), [
@@ -95,7 +98,7 @@ def main():
                             sample_size=val_sample_size, pos_rate=val_pos_rate, num_workers=num_workers)
 
     run(train_loader=train_loader, val_loader=val_loader, model=model, epochs=epochs, 
-              optim=optim, scheduler=scheduler, save_path=save_path, threshold=train_pos_rate)
+              optim=optim, criterion=criterion, scheduler=scheduler, save_path=save_path)
     
 if __name__ == '__main__':
     main()

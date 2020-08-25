@@ -99,9 +99,8 @@ class FeatureNet(nn.Module):
         
         self.gap=nn.AdaptiveAvgPool3d((None,1,1))#global average pooling
         
-        self.fc1=nn.Linear(128*16*16*16, 512)##new
-        self.fc2=nn.Linear(512, 128)##new
-        self.fc3=nn.Linear(128, out_channels)##new 
+        self.fc1=nn.Linear(128*16, 128)##new
+        self.fc2=nn.Linear(128, out_channels)##new 
     
     def forward(self, x):
         out = self.preBlock(x)#16
@@ -123,11 +122,11 @@ class FeatureNet(nn.Module):
         
         rev2 = self.path2(comb3)
         comb2 = self.back2(torch.cat((rev2, out2), 1))#64+64
-
-        x = comb2.view(-1, 128*16*16*16)
+        
+        gap = self.gap(F.relu(comb2))
+        
+        x = gap.view(-1, 128*16)
         x = F.relu(self.fc1(x), inplace=True)
-        x = F.relu(self.fc2(x), inplace=True)
-        x = F.dropout(x, 0.5, training=self.training)
-        out = self.fc3(x)
+        out = self.fc2(x)
         
         return out

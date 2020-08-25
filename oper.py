@@ -10,7 +10,7 @@ from tqdm import tqdm
 import utils
 from metrics import metrics
 
-def train(loader, model, optim, pos_weight):
+def train(loader, model, optim, criterion):
     model.train()
     
     losses = np.array([])
@@ -18,23 +18,26 @@ def train(loader, model, optim, pos_weight):
     y_true_all = np.array([])
     y_score_all = np.array([])
     
-    for idx, (X, y) in tqdm(enumerate(loader), total=len(loader), desc='Training'):
+    for idx, (X, y_src) in tqdm(enumerate(loader), total=len(loader), desc='Training'):
         optim.zero_grad()
         
-        y_name = y[1]
-        y = y[0]
+        y, y_name = y_src
         X = X.float().cuda() # [N, IC=1, D, H, W]
-        y = y.float().cuda() # foreground = 1
-        pred = model(X) # foreground logit proba [N, 1]
-        
-        loss = nn.BCEWithLogitsLoss(reduction='mean', pos_weight = torch.tensor(pos_weight))(pred, y)
+        y = y.float().cuda() # [N]
+        pred = model(X) # logit proba [N, OC]
+
+        loss = criterion(pred, y)
         y_true = y.detach().cpu().numpy().astype(np.uint8)
-        y_score = torch.sigmoid(pred).detach().cpu().numpy()
+        
+        if pred.size()[1] == 1:
+            y_score = torch.sigmoid(pred).detach().cpu().numpy()
+        else:
+            y_score = nn.functional.softmax(pred, dim=1).detach().cpu().numpy()
         
         losses = np.concatenate((losses, loss.detach().cpu().numpy().reshape(-1)))
         y_name_all.extend(y_name)
-        y_true_all = np.concatenate((y_true_all, y_true.reshape(-1)))
-        y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
+        y_true_all = np.concatenate((y_true_all, y_true), axis=0) if y_true_all.size else y_true
+        y_score_all = np.concatenate((y_score_all, y_score), axis=0) if y_score_all.size else y_score
         
         loss.backward()
         optim.step()
@@ -45,7 +48,7 @@ def train(loader, model, optim, pos_weight):
     return losses, y_name_all, y_true_all, y_score_all
 
 
-def evaluate(loader, model, pos_weight):
+def evaluate(loader, model, criterion):
     model.eval()
     
     losses = np.array([])
@@ -54,21 +57,24 @@ def evaluate(loader, model, pos_weight):
     y_score_all = np.array([])
     
     with torch.no_grad():
-        for idx, (X, y) in tqdm(enumerate(loader), total=len(loader), desc='Validating'):
-            y_name = y[1]
-            y = y[0]
+        for idx, (X, y_src) in tqdm(enumerate(loader), total=len(loader), desc='Validating'):
+            y, y_name = y_src
             X = X.float().cuda() # [N, IC=1, D, H, W]
-            y = y.float().cuda() # foreground = 1
-            pred = model(X) # foreground logit proba [N, 1]
+            y = y.float().cuda() # [N]
+            pred = model(X) # logit proba [N, OC]
             
-            loss = nn.BCEWithLogitsLoss(reduction='mean', pos_weight = torch.tensor(pos_weight))(pred, y)
+            loss = criterion(pred, y)
             y_true = y.detach().cpu().numpy().astype(np.uint8)
-            y_score = torch.sigmoid(pred).detach().cpu().numpy()
-
+            
+            if pred.size()[1] == 1:##
+                y_score = torch.sigmoid(pred).detach().cpu().numpy()
+            else:
+                y_score = nn.functional.softmax(pred, dim=1).detach().cpu().numpy()
+            
             losses = np.concatenate((losses, loss.detach().cpu().numpy().reshape(-1)))
             y_name_all.extend(y_name)
-            y_true_all = np.concatenate((y_true_all, y_true.reshape(-1)))
-            y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
+            y_true_all = np.concatenate((y_true_all, y_true), axis=0) if y_true_all.size else y_true
+            y_score_all = np.concatenate((y_score_all, y_score), axis=0) if y_score_all.size else y_score
 
             del X, y, pred, loss
             torch.cuda.empty_cache()
@@ -85,11 +91,11 @@ def test(loader, model):
     with torch.no_grad():
         for idx, (X, y_name) in tqdm(enumerate(loader), total=len(loader), desc='Testing'):
             X = X.float().cuda() # [N, IC=1, D, H, W]
-            pred = model(X) # foreground logit proba [N, 1]
+            pred = model(X) # logit proba [N, OC]
             y_score = torch.sigmoid(pred).detach().cpu().numpy()
 
             y_name_all.extend(y_name)
-            y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
+            y_score_all = np.concatenate((y_score_all, y_score), axis=0) if y_score_all.size else y_score
 
             del X, pred
             torch.cuda.empty_cache()
@@ -97,18 +103,17 @@ def test(loader, model):
     return y_name_all, y_score_all
 
 
-def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, threshold):
+def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, save_path):
     ckpt_path = os.path.join(save_path, 'checkpoint.tar.gz')
     log_path = os.path.join(save_path, 'logs')
     data_path = os.path.join(save_path, 'data')
+    
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     if not os.path.exists(data_path):
         os.makedirs(data_path)
         
     tb_writer = SummaryWriter(log_path)
-    
-    pos_weight = int((1-threshold)/threshold)
     
     #TODO(3): logger module
     print('====================')
@@ -124,8 +129,8 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         print('start at: ', utils.timestamp())
         epoch_start = utils.tic()
         
-        train_data = train(loader=train_loader, model=model, optim=optim, pos_weight=pos_weight)
-        val_data = evaluate(loader=val_loader, model=model, pos_weight=pos_weight)
+        train_data = train(loader=train_loader, model=model, optim=optim, criterion=criterion)
+        val_data = evaluate(loader=val_loader, model=model, criterion=criterion)
         
         scheduler.step()
         
@@ -138,10 +143,10 @@ def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, th
         val_losses, *val_results = val_data
         
         train_loss = np.average(train_losses)
-        train_metrics = metrics(train_results, threshold=threshold, csv_path = os.path.join(data_path, 'train_%02d.csv'%(epoch)))
+        train_metrics = metrics(train_results, csv_path = os.path.join(data_path, 'train_%02d.csv'%(epoch)))
         
-        val_loss = np.average(val_losses) 
-        val_metrics = metrics(val_results, threshold=threshold, csv_path = os.path.join(data_path, 'val_%02d.csv'%(epoch)))
+        val_loss = np.average(val_losses)
+        val_metrics = metrics(val_results, csv_path = os.path.join(data_path, 'val_%02d.csv'%(epoch)))
         
         train_acc, train_prc, train_rec, train_roc_auc, train_curve = train_metrics
         val_acc, val_prc, val_rec, val_roc_auc, val_curve = val_metrics

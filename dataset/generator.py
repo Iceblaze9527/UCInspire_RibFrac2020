@@ -35,7 +35,7 @@ class DatasetGen(Dataset):
         
         ##multiclass
         if self.is_multi == False:
-            label = 0 if label == 0 else 1 
+            label = 0 if label == 0 else 1
         
         return torch.from_numpy(img), [torch.from_numpy(np.array([label]).astype(np.int64)), public_id(self.img_name)]
     

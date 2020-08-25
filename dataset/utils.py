@@ -23,7 +23,7 @@ def get_dataset(img_path, bbox_path, label_names, is_multi=False, resize=64, aug
 def get_loader(img_path, bbox_path, loader_mode, sample_mode, is_multi=False, resize=64, augmenter=None, batch_size=1, 
                sample_size=800, pos_rate=0.2, num_workers=4):
     
-    assert loader_mode in ['train', 'val', 'test'], f'Invalid mode, got {loader_mode}.'
+    assert loader_mode in ['train', 'val'], f'Invalid mode, got {loader_mode}.'
     assert sample_mode in ['all', 'sampled'], f'Invalid sample mode, got {sample_mode}.'
     
     if loader_mode == 'train':
@@ -34,18 +34,18 @@ def get_loader(img_path, bbox_path, loader_mode, sample_mode, is_multi=False, re
         bbox_path = os.path.join(bbox_path, 'val')
     
     if sample_mode == 'all':
-        if loader_mode == 'test':
+        if loader_mode == 'val':
             dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos', 'rpn_neg'], is_multi=is_multi,
-                                  resize = resize, augmenter = augmenter)
+                                  resize = resize, augmenter = None)
         else:
             dataset = get_dataset(img_path, bbox_path, label_names = ['gt_pos', 'rpn_pos', 'rpn_neg'], is_multi=is_multi,
                                   resize = resize, augmenter = augmenter)
         print(''.join((loader_mode, ' dataset size: ', str(len(dataset)))))
     
     else:
-        if loader_mode == 'test':
+        if loader_mode == 'val':
             pos_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos'], is_multi=is_multi,
-                                      resize = resize, augmenter = augmenter)
+                                      resize = resize, augmenter = None)
         else:
             pos_dataset = get_dataset(img_path, bbox_path, label_names = ['gt_pos', 'rpn_pos'], is_multi=is_multi,
                                   resize = resize, augmenter = augmenter)

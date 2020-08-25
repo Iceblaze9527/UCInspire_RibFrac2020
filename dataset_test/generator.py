@@ -7,18 +7,16 @@ import numpy as np
 import nibabel as nib
 
 class DatasetGen(Dataset):
-    def __init__(self, img_name, bbox_name, is_multi=False, resize=64):
+    def __init__(self, img_name, bbox_name, resize=64):
         super(DatasetGen, self).__init__()
-        
         self.img_name = img_name
-        self.is_multi = is_multi
         self.resize = resize
 
         self.bboxes = np.load(bbox_name, allow_pickle=True)
-        assert (self.bboxes).shape[1] == 6, f'Bounding box dim mismatch, got {(self.bboxes).shape[1]}.'
+        assert (self.bboxes).shape[1] == 7, f'Bounding box dim mismatch, got {(self.bboxes).shape[1]}.'
 
     def __getitem__(self, index):
-        bbox = self.bboxes[index]
+        bbox = self.bboxes[index, 1:]
         img = nib.load(self.img_name).get_fdata()#H*W*D
         assert img.ndim == 3, f'Input dimension mismatch, , got {img.ndim}.'
         
@@ -26,10 +24,6 @@ class DatasetGen(Dataset):
         
         img = self.crop(img, bbox, self.resize)#H*W*D
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
-        
-        ##multiclass
-        if self.is_multi == False:
-            label = 0 if label == 0 else 1 
         
         return torch.from_numpy(img), public_id(self.img_name)
     
