@@ -91,7 +91,7 @@ def main():
                               sample_size=train_sample_size, pos_rate=train_pos_rate, num_workers=num_workers)
     
     val_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode=val_sample_mode, is_multi=is_multi,
-                            resize=resize, augmenter=aug, batch_size=batch_size, 
+                            resize=resize, augmenter=None, batch_size=batch_size, 
                             sample_size=val_sample_size, pos_rate=val_pos_rate, num_workers=num_workers)
 
     run(train_loader=train_loader, val_loader=val_loader, model=model, epochs=epochs, 

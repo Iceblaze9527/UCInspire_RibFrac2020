@@ -76,6 +76,27 @@ def evaluate(loader, model, pos_weight):
     return losses, y_name_all, y_true_all, y_score_all
 
 
+def test(loader, model):
+    model.eval()
+    
+    y_name_all = []
+    y_score_all = np.array([])
+    
+    with torch.no_grad():
+        for idx, (X, y_name) in tqdm(enumerate(loader), total=len(loader), desc='Testing'):
+            X = X.float().cuda() # [N, IC=1, D, H, W]
+            pred = model(X) # foreground logit proba [N, 1]
+            y_score = torch.sigmoid(pred).detach().cpu().numpy()
+
+            y_name_all.extend(y_name)
+            y_score_all = np.concatenate((y_score_all, y_score.reshape(-1)))
+
+            del X, pred
+            torch.cuda.empty_cache()
+    
+    return y_name_all, y_score_all
+
+
 def run(train_loader, val_loader, model, epochs, optim, scheduler, save_path, threshold):
     ckpt_path = os.path.join(save_path, 'checkpoint.tar.gz')
     log_path = os.path.join(save_path, 'logs')
