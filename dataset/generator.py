@@ -33,11 +33,11 @@ class DatasetGen(Dataset):
         img = self.aug(image=img) if self.aug is not None else img
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
         
-        ##multiclass
         if self.is_multi == False:
             label = 0 if label == 0 else 1
         
-        return torch.from_numpy(img), [torch.from_numpy(np.array([label]).astype(np.int64)), public_id(self.img_name)]
+        return torch.from_numpy(img), [torch.from_numpy(np.array([label]).astype(np.int64)), 
+                                       public_id(self.img_name), bbox[:3]]
     
     def __len__(self):
         return (self.bboxes).shape[0]

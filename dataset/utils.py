@@ -46,11 +46,12 @@ def get_loader(img_path, bbox_path, loader_mode, sample_mode, is_multi=False, re
         if loader_mode == 'val':
             pos_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_pos'], is_multi=is_multi,
                                       resize = resize, augmenter = None)
+            neg_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_neg'], is_multi=is_multi, 
+                                  resize = resize, augmenter = None)
         else:
             pos_dataset = get_dataset(img_path, bbox_path, label_names = ['gt_pos', 'rpn_pos'], is_multi=is_multi,
                                   resize = resize, augmenter = augmenter)
-        
-        neg_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_neg'], is_multi=is_multi, 
+            neg_dataset = get_dataset(img_path, bbox_path, label_names = ['rpn_neg'], is_multi=is_multi, 
                                   resize = resize, augmenter = augmenter)
         
         pos_idx = np.random.randint(len(pos_dataset), size = int(sample_size * pos_rate))

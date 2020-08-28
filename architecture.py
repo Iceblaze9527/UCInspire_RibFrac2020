@@ -97,8 +97,6 @@ class FeatureNet(nn.Module):
             nn.BatchNorm3d(64),
             nn.ReLU(inplace=True))
         
-        self.gap=nn.AdaptiveAvgPool3d((None,1,1))#global average pooling
-        
         self.fc1=nn.Linear(128*16*16*16, 512)##new
         self.fc2=nn.Linear(512, 128)##new
         self.fc3=nn.Linear(128, out_channels)##new 

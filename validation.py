@@ -4,18 +4,15 @@ import sys
 import torch
 import torch.nn as nn
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-from architecture_gap import FeatureNet
-from dataset.utils import get_dataset, get_loader
+from architecture import FeatureNet
+from dataset.utils import get_loader
 from oper import evaluate
 import utils
 from metrics import metrics
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
 #model params
@@ -27,14 +24,14 @@ bbox_path = '/home/yutongx/src_data/bbox_multi/'
 resize = 64
 num_workers = 0
 
-eval_sample_mode = 'sampled'
-eval_sample_size = 500
+eval_sample_mode = 'all'
+eval_sample_size = 64
 eval_pos_rate = 0.5
 
 batch_size = 64
 
 #save params
-save_path = './checkpoints/checkpoint_8'
+save_path = './checkpoints/checkpoint_9'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'
@@ -51,7 +48,7 @@ def main():
         model = FeatureNet(in_channels=1, out_channels=1)
         criterion = nn.BCEWithLogitsLoss(reduction='none')
     else:
-        model = FeatureNet(in_channels=1, out_channels=6)
+        model = FeatureNet(in_channels=1, out_channels=5)
         criterion = nn.CrossEntropyLoss(reduction='none', ignore_index = -1)
     
     model = utils.gpu_manager(model)
@@ -68,17 +65,15 @@ def main():
     print('start running at: ', utils.timestamp())
     start = utils.tic()
     
-    eval_data = evaluate(loader=eval_loader, model=model, criterion=criterion)
+    eval_results = evaluate(loader=eval_loader, model=model, criterion=criterion)
     
     print('end running at: ', utils.timestamp())
     end = utils.tic()
     print('overall runtime: ', utils.delta_time(start, end))
     
-    eval_losses, *eval_results = eval_data
-    eval_loss = np.average(eval_losses)
-    eval_acc, eval_prc, eval_rec, eval_roc_auc, eval_curve = metrics(eval_results,
-                                                                     csv_path=os.path.join(data_path, 'eval.csv'))
-
+    eval_loss, eval_acc, eval_prc, eval_rec, eval_roc_auc = metrics(
+        eval_results, csv_path=os.path.join(eval_path, 'eval.csv'), is_multi=is_multi, is_test=False)
+    
     print('---------------------')
     print('Validation Results:')
     print('Loss: ', eval_loss)
@@ -87,8 +82,6 @@ def main():
     print('Recall:', eval_rec)
     print('ROC AUC:', eval_roc_auc)
     print('====================')
-    
-    eval_curve.savefig(os.path.join(data_path, 'eval.png'))
 
 if __name__ == '__main__':
     main()

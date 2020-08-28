@@ -25,7 +25,7 @@ class DatasetGen(Dataset):
         img = self.crop(img, bbox, self.resize)#H*W*D
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
         
-        return torch.from_numpy(img), public_id(self.img_name)
+        return torch.from_numpy(img), [public_id(self.img_name), bbox[:3]]
     
     def __len__(self):
         return (self.bboxes).shape[0]

@@ -3,11 +3,10 @@ import sys
 
 import torch
 import torch.nn as nn
-
 import imgaug.augmenters as iaa
 
-from architecture_gap import FeatureNet
-from dataset.utils import get_dataset, get_loader
+from architecture import FeatureNet
+from dataset.utils import get_loader
 from oper import run
 import utils
 
@@ -65,10 +64,10 @@ def main():
     
     if is_multi == False:
         model = FeatureNet(in_channels=1, out_channels=1)
-        criterion = nn.BCEWithLogitsLoss(reduction='mean')
+        criterion = nn.BCEWithLogitsLoss(reduction='none')
     else:
-        model = FeatureNet(in_channels=1, out_channels=6)
-        criterion = nn.CrossEntropyLoss(reduction='mean', ignore_index = -1)
+        model = FeatureNet(in_channels=1, out_channels=5)
+        criterion = nn.CrossEntropyLoss(reduction='none', ignore_index = -1)
     
     model = utils.gpu_manager(model)
 
@@ -97,7 +96,7 @@ def main():
                             resize=resize, augmenter=None, batch_size=batch_size, 
                             sample_size=val_sample_size, pos_rate=val_pos_rate, num_workers=num_workers)
 
-    run(train_loader=train_loader, val_loader=val_loader, model=model, epochs=epochs, 
+    run(train_loader=train_loader, val_loader=val_loader, model=model, is_multi=is_multi, epochs=epochs, 
               optim=optim, criterion=criterion, scheduler=scheduler, save_path=save_path)
     
 if __name__ == '__main__':
