@@ -24,19 +24,20 @@ bbox_path = '/home/yutongx/src_data/det_bbox_test/'
 resize = 64
 num_workers = 0
 
-test_sample_mode = 'all'
-test_sample_size = 64
+test_sample_mode = 'sampled'
+test_sample_size = 16
 
 #test params
-batch_size = 64
+batch_size = 16
 
 #save params
 save_path = './checkpoints/checkpoint_9'
+out_path = './checkpoints/checkpoint_9_deb'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'
     
-    test_path = os.path.join(save_path, 'result')
+    test_path = os.path.join(out_path, 'result')
     if not os.path.exists(test_path):
         os.makedirs(test_path)
     
@@ -62,7 +63,7 @@ def main():
     print('start running at: ', utils.timestamp())
     start = utils.tic()
     
-    test_results = test(loader=test_loader, model=model)
+    test_results = test(loader=test_loader, model=model, is_multi=is_multi)
     
     print('end running at: ', utils.timestamp())
     end = utils.tic()

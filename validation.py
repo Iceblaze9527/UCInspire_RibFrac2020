@@ -24,19 +24,20 @@ bbox_path = '/home/yutongx/src_data/bbox_multi/'
 resize = 64
 num_workers = 0
 
-eval_sample_mode = 'all'
-eval_sample_size = 64
+eval_sample_mode = 'sampled'
+eval_sample_size = 16
 eval_pos_rate = 0.5
 
-batch_size = 64
+batch_size = 16
 
 #save params
 save_path = './checkpoints/checkpoint_9'
+out_path = './checkpoints/checkpoint_9_deb'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'
     
-    eval_path = os.path.join(save_path, 'validation')
+    eval_path = os.path.join(out_path, 'validation')
     if not os.path.exists(eval_path):
         os.makedirs(eval_path)
     
@@ -65,7 +66,7 @@ def main():
     print('start running at: ', utils.timestamp())
     start = utils.tic()
     
-    eval_results = evaluate(loader=eval_loader, model=model, criterion=criterion)
+    eval_results = evaluate(loader=eval_loader, model=model, is_multi=is_multi, criterion=criterion)
     
     print('end running at: ', utils.timestamp())
     end = utils.tic()

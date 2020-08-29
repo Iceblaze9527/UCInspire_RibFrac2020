@@ -12,7 +12,7 @@ from metrics import metrics
 
 concat = lambda head, tail: np.concatenate((head, tail), axis=0) if head.size else tail
 
-def train(loader, model, optim, criterion):
+def train(loader, model, optim, is_multi, criterion):
     model.train()
     
     losses = np.array([])
@@ -25,22 +25,22 @@ def train(loader, model, optim, criterion):
         optim.zero_grad()
         
         y, y_name, y_center = y_src
+        y_true_all = concat(y_true_all, y)
+        y_name_all.extend(y_name)
+        y_center_all = concat(y_center_all, y_center)
+        
         X = X.float().cuda() # [N, IC=1, D, H, W]
         y = y.float().cuda() # [N]
         pred = model(X) # logit proba [N, OC]
-
-        loss = criterion(pred, y)
-        y_true = y.detach().cpu().numpy().astype(np.uint8)
         
-        if pred.size()[1] == 1:
+        if is_multi == False:
+            loss = criterion(pred, y)
             y_score = torch.sigmoid(pred).detach().cpu().numpy()
         else:
+            loss = criterion(pred, y.long())
             y_score = F.softmax(pred, dim=1).detach().cpu().numpy()
         
         losses = concat(losses, loss.detach().cpu().numpy())
-        y_name_all.extend(y_name)
-        y_center_all = concat(y_center_all, y_center)
-        y_true_all = concat(y_true_all, y_true)
         y_score_all = concat(y_score_all, y_score)
         
         loss.mean().backward()
@@ -52,7 +52,7 @@ def train(loader, model, optim, criterion):
     return losses, y_name_all, y_center_all, y_true_all, y_score_all
 
 
-def evaluate(loader, model, criterion):
+def evaluate(loader, model, is_multi, criterion):
     model.eval()
     
     losses = np.array([])
@@ -64,22 +64,22 @@ def evaluate(loader, model, criterion):
     with torch.no_grad():
         for idx, (X, y_src) in tqdm(enumerate(loader), total=len(loader), desc='Validating'):
             y, y_name, y_center = y_src
+            y_true_all = concat(y_true_all, y)
+            y_name_all.extend(y_name)
+            y_center_all = concat(y_center_all, y_center)
+            
             X = X.float().cuda() # [N, IC=1, D, H, W]
             y = y.float().cuda() # [N]
             pred = model(X) # logit proba [N, OC]
             
-            loss = criterion(pred, y)
-            y_true = y.detach().cpu().numpy().astype(np.uint8)
-            
-            if pred.size()[1] == 1:
+            if is_multi == False:
+                loss = criterion(pred, y)
                 y_score = torch.sigmoid(pred).detach().cpu().numpy()
             else:
+                loss = criterion(pred, y.long())
                 y_score = F.softmax(pred, dim=1).detach().cpu().numpy()
             
             losses = concat(losses, loss.detach().cpu().numpy())
-            y_name_all.extend(y_name)
-            y_center_all = concat(y_center_all, y_center)
-            y_true_all = concat(y_true_all, y_true)
             y_score_all = concat(y_score_all, y_score)
 
             del X, y, pred, loss
@@ -88,7 +88,7 @@ def evaluate(loader, model, criterion):
     return losses, y_name_all, y_center_all, y_true_all, y_score_all
 
 
-def test(loader, model):
+def test(loader, model, is_multi):
     model.eval()
     
     y_name_all = []
@@ -97,14 +97,18 @@ def test(loader, model):
     
     with torch.no_grad():
         for idx, (X, y_src) in tqdm(enumerate(loader), total=len(loader), desc='Testing'):
+            y_name, y_center = y_src
+            y_name_all.extend(y_name)
+            y_center_all = concat(y_center_all, y_center)
+            
             X = X.float().cuda() # [N, IC=1, D, H, W]
             pred = model(X) # logit proba [N, OC]
             
-            y_name, y_center = y_src
-            y_score = torch.sigmoid(pred).detach().cpu().numpy()
+            if is_multi == False:
+                y_score = torch.sigmoid(pred).detach().cpu().numpy()
+            else:
+                y_score = F.softmax(pred, dim=1).detach().cpu().numpy()
 
-            y_name_all.extend(y_name)
-            y_center_all = concat(y_center_all, y_center)
             y_score_all = concat(y_score_all, y_score)
 
             del X, pred
@@ -139,8 +143,8 @@ def run(train_loader, val_loader, model, is_multi, epochs, optim, criterion, sch
         print('start at: ', utils.timestamp())
         epoch_start = utils.tic()
         
-        train_results = train(loader=train_loader, model=model, optim=optim, criterion=criterion)
-        val_results = evaluate(loader=val_loader, model=model, criterion=criterion)
+        train_results = train(loader=train_loader, model=model, optim=optim, is_multi=is_multi, criterion=criterion)
+        val_results = evaluate(loader=val_loader, model=model, is_multi=is_multi, criterion=criterion)
         
         scheduler.step()
         

@@ -12,7 +12,7 @@ import utils
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
 #model params
@@ -27,7 +27,7 @@ bbox_path = '/home/yutongx/src_data/bbox_multi/'
 resize = 64
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
-num_workers = 0
+num_workers = 8
 
 train_sample_mode = 'sampled'
 train_sample_size = 16
@@ -52,7 +52,7 @@ milestones = [24, 48]
 lr_gamma = 0.5
 
 #save params
-save_path = './checkpoints/checkpoint_9'
+save_path = './checkpoints/checkpoint_10'
 
 def main():
     if not os.path.exists(save_path):

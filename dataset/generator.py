@@ -9,14 +9,11 @@ import nibabel as nib
 class DatasetGen(Dataset):
     def __init__(self, img_name, bbox_name, label_names, is_multi=False, resize=64, augmenter=None):
         super(DatasetGen, self).__init__()
-        if not isinstance(label_names, list):
-            raise TypeError('label_names is not a list.')
-        
         self.img_name = img_name
         self.is_multi = is_multi
         self.resize = resize
         self.aug = augmenter
-
+        
         self.bboxes = self.get_bboxes(bbox_name, label_names)
         assert (self.bboxes).shape[1] == 7, f'Bounding box dim mismatch, got {(self.bboxes).shape[1]}.'
 
