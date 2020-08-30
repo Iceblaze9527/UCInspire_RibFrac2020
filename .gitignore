@@ -1,0 +1,5 @@
+**/checkpoints
+**/.ipynb_check*
+**/*.pyc
+**/dataset/*.pyc
+**/dataset_test/*.pyc
