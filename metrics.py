@@ -2,51 +2,35 @@ import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 import pandas as pd
 
-def metrics(results, csv_path, is_multi=False, is_test=False):
+def metrics(results, csv_path, is_test=False):
+    pred = lambda score: np.where(score > 0.5, 1, 0).astype(np.uint8)
+    
     if is_test == False:
-        losses, y_name, y_center, y_true, y_score = results
+        y_name, y_center, y_score, y_true, losses = results
+        y_pred = pred(y_score)
+
+        df = pd.DataFrame({'public_id': y_name, 
+                           'z_center': y_center[:,0].reshape(-1),
+                           'y_center': y_center[:,1].reshape(-1),
+                           'x_center': y_center[:,2].reshape(-1),
+                           'proba': y_score.reshape(-1),
+                           'y_pred': y_pred.reshape(-1),
+                           'y_true': y_true.reshape(-1)})
+
+        df.to_csv(csv_path, index=False, sep=',')
+
+        return np.average(losses), accuracy_score(y_true, y_pred), precision_score(y_true, y_pred), \
+    recall_score(y_true, y_pred), roc_auc_score(y_true, y_score)
+    
     else:
         y_name, y_center, y_score = results
-    
-    if is_multi == False:  
-        y_pred = np.where(y_score > 0.5, 1, 0).astype(np.uint8)
+        y_pred = pred(y_score)
 
         df = pd.DataFrame({'public_id': y_name, 
-                           'z_center':y_center[:,0].reshape(-1),
-                           'y_center':y_center[:,1].reshape(-1),
-                           'x_center':y_center[:,2].reshape(-1),
+                           'z_center': y_center[:,0].reshape(-1),
+                           'y_center': y_center[:,1].reshape(-1),
+                           'x_center': y_center[:,2].reshape(-1),
                            'proba': y_score.reshape(-1),
                            'y_pred': y_pred.reshape(-1)})
-        
-        df.to_csv(csv_path, index=False, sep=',')
-        
-        if is_test == False:
-            accuracy = accuracy_score(y_true, y_pred)
-            precision = precision_score(y_true, y_pred)
-            recall = recall_score(y_true, y_pred)
-            roc_auc = roc_auc_score(y_true, y_score)
-            
-            return np.average(losses), accuracy, precision, recall, roc_auc
-    
-    else:
-        y_pred = np.argmax(y_score, axis=1)
 
-        df = pd.DataFrame({'public_id': y_name, 
-                   'z_center':y_center[:,0].reshape(-1),
-                   'y_center':y_center[:,1].reshape(-1),
-                   'x_center':y_center[:,2].reshape(-1),
-                   'proba_0': y_score[:,0].reshape(-1),
-                   'proba_1': y_score[:,1].reshape(-1),
-                   'proba_2': y_score[:,2].reshape(-1),
-                   'proba_3': y_score[:,3].reshape(-1),
-                   'proba_4': y_score[:,4].reshape(-1),
-                   'y_pred': y_pred.reshape(-1)})
         df.to_csv(csv_path, index=False, sep=',')
-        
-        if is_test == False:
-            accuracy = accuracy_score(y_true, y_pred, average='macro')
-            precision = precision_score(y_true, y_pred, average='macro')
-            recall = recall_score(y_true, y_pred, average='macro')
-            roc_auc = roc_auc_score(y_true, y_score, average='macro', multi_class='ovo')
-            
-            return np.average(losses), accuracy, precision, recall, roc_auc

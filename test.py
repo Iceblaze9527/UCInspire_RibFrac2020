@@ -15,9 +15,6 @@ from metrics import metrics
 os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
-#model params
-is_multi = False
-
 #data params
 img_path = '/home/yutongx/src_data/images/test/'
 bbox_path = '/home/yutongx/src_data/det_bbox_test/'
@@ -45,11 +42,7 @@ def main():
     #TODO(3) logger module
     sys.stdout = utils.Logger(os.path.join(test_path, 'log'))
     
-    if is_multi == False:
-        model = FeatureNet(in_channels=1, out_channels=1)
-    else:
-        model = FeatureNet(in_channels=1, out_channels=5)
-    
+    model = FeatureNet(in_channels=1, out_channels=1)
     model = utils.gpu_manager(model)
     
     checkpoint = torch.load(os.path.join(save_path, 'checkpoint.tar.gz'))
@@ -63,7 +56,7 @@ def main():
     print('start running at: ', utils.timestamp())
     start = utils.tic()
     
-    test_results = test(loader=test_loader, model=model, is_multi=is_multi)
+    test_results = test(loader=test_loader, model=model)
     
     print('end running at: ', utils.timestamp())
     end = utils.tic()
@@ -72,7 +65,7 @@ def main():
     print('---------------------')
     print(f'Print Results to csv file.')
     
-    metrics(test_results, csv_path=os.path.join(test_path, 'result.csv'), is_multi=is_multi, is_test=True)
+    metrics(test_results, csv_path=os.path.join(test_path, 'result.csv'), is_test=True)
     
     print('====================')
 

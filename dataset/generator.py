@@ -7,10 +7,9 @@ import numpy as np
 import nibabel as nib
 
 class DatasetGen(Dataset):
-    def __init__(self, img_name, bbox_name, label_names, is_multi=False, resize=64, augmenter=None):
+    def __init__(self, img_name, bbox_name, label_names, resize=64, augmenter=None):
         super(DatasetGen, self).__init__()
         self.img_name = img_name
-        self.is_multi = is_multi
         self.resize = resize
         self.aug = augmenter
         
@@ -18,20 +17,15 @@ class DatasetGen(Dataset):
         assert (self.bboxes).shape[1] == 7, f'Bounding box dim mismatch, got {(self.bboxes).shape[1]}.'
 
     def __getitem__(self, index):
-        bbox = self.bboxes[index, :-1]
-        label = self.bboxes[index, -1]
-        img = nib.load(self.img_name).get_fdata()#H*W*D
-        assert img.ndim == 3, f'Input dimension mismatch, , got {img.ndim}.'
-        
         public_id = lambda name: ''.join(('RibFrac', re.sub(r"\D", "", name)))
         
-        img = self.crop(img, bbox, self.resize)#H*W*D
+        bbox = self.bboxes[index, :-1]
+        label = self.bboxes[index, -1]
         
+        img = nib.load(self.img_name).get_fdata()#H*W*D
+        img = self.crop(img, bbox, self.resize)#H*W*D
         img = self.aug(image=img) if self.aug is not None else img
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
-        
-        if self.is_multi == False:
-            label = 0 if label == 0 else 1
         
         return torch.from_numpy(img), [torch.from_numpy(np.array([label]).astype(np.int64)), 
                                        public_id(self.img_name), bbox[:3]]

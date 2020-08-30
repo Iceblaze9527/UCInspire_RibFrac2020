@@ -15,12 +15,9 @@ from metrics import metrics
 os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
-#model params
-is_multi = False
-
 #data params
 img_path = '/home/yutongx/src_data/images/'
-bbox_path = '/home/yutongx/src_data/bbox_multi/'
+bbox_path = '/home/yutongx/src_data/bbox_binary/'
 resize = 64
 num_workers = 0
 
@@ -45,19 +42,15 @@ def main():
     #TODO(3) logger module
     sys.stdout = utils.Logger(os.path.join(eval_path, 'log'))
     
-    if is_multi == False:
-        model = FeatureNet(in_channels=1, out_channels=1)
-        criterion = nn.BCEWithLogitsLoss(reduction='none')
-    else:
-        model = FeatureNet(in_channels=1, out_channels=5)
-        criterion = nn.CrossEntropyLoss(reduction='none', ignore_index = -1)
+    model = FeatureNet(in_channels=1, out_channels=1)
+    criterion = nn.BCEWithLogitsLoss(reduction='none')
     
     model = utils.gpu_manager(model)
     
     checkpoint = torch.load(os.path.join(save_path, 'checkpoint.tar.gz'))
     model.load_state_dict(checkpoint['model_state_dict'])
     
-    eval_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = eval_sample_mode, is_multi=is_multi,
+    eval_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = eval_sample_mode,
                              resize=resize, augmenter=None, batch_size=batch_size, 
                              sample_size=eval_sample_size, pos_rate=eval_pos_rate, num_workers=num_workers)
 
@@ -66,14 +59,14 @@ def main():
     print('start running at: ', utils.timestamp())
     start = utils.tic()
     
-    eval_results = evaluate(loader=eval_loader, model=model, is_multi=is_multi, criterion=criterion)
+    eval_results = evaluate(loader=eval_loader, model=model, criterion=criterion)
     
     print('end running at: ', utils.timestamp())
     end = utils.tic()
     print('overall runtime: ', utils.delta_time(start, end))
     
     eval_loss, eval_acc, eval_prc, eval_rec, eval_roc_auc = metrics(
-        eval_results, csv_path=os.path.join(eval_path, 'eval.csv'), is_multi=is_multi, is_test=False)
+        eval_results, csv_path=os.path.join(eval_path, 'eval.csv'), is_test=False)
     
     print('---------------------')
     print('Validation Results:')
