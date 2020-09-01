@@ -21,14 +21,14 @@ bbox_path = '/home/yutongx/src_data/bbox_multi/'
 resize = 64
 num_workers = 0
 
-eval_sample_mode = 'sampled'
+eval_sample_mode = 'all'
 eval_sample_size = 16
 
-batch_size = 16
+batch_size = 128
 
 #save params
-save_path = './checkpoints/checkpoint_9'
-out_path = './checkpoints/checkpoint_9_deb'
+save_path = './checkpoints/checkpoint_1'
+out_path = './checkpoints/checkpoint_1_gt'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'

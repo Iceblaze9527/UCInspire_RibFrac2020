@@ -24,6 +24,8 @@ class DatasetGen(Dataset):
         
         img = nib.load(self.img_name).get_fdata()#H*W*D
         img = self.crop(img, bbox, self.resize)#H*W*D
+        img = self.thresholding(img, low_th=100, high_th=3071)
+        
         img = self.aug(image=img) if self.aug is not None else img
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
         
@@ -45,6 +47,13 @@ class DatasetGen(Dataset):
             bbox_data = np.concatenate((bbox_data, bboxes), axis=0)
                 
         return bbox_data
+    
+    @staticmethod
+    def thresholding(img, low_th=100, high_th=3071):
+        img[img < low_th] = 0
+        img[img > high_th] = 0
+        
+        return np.log(1+img)
     
     @staticmethod
     def crop(image, bbox, length):

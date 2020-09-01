@@ -124,6 +124,7 @@ class FeatureNet(nn.Module):
 
         x = comb2.view(-1, 128*16*16*16)
         x = F.relu(self.fc1(x), inplace=True)
+#         x = F.dropout(x, 0.5, training=self.training)##new
         x = F.relu(self.fc2(x), inplace=True)
         x = F.dropout(x, 0.5, training=self.training)
         out = self.fc3(x)

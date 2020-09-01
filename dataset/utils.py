@@ -31,14 +31,14 @@ def get_loader(img_path, bbox_path, loader_mode, sample_mode, resize=64, augment
     if loader_mode == 'train':
         img_path = os.path.join(img_path, 'train')
         bbox_path = os.path.join(bbox_path, 'train')
-        gt_pos = get_dataset(img_path, bbox_path, label_names = ['gt_pos'], resize = resize, augmenter = augmenter)
     else:
         img_path = os.path.join(img_path, 'val')
         bbox_path = os.path.join(bbox_path, 'val')
     
+    gt_pos = get_dataset(img_path, bbox_path, label_names = ['gt_pos'], resize = resize, augmenter = augmenter)
     rpn_pos = get_dataset(img_path, bbox_path, label_names = ['rpn_pos'], resize = resize, augmenter = augmenter)
     
-    pos = ConcatDataset([gt_pos, rpn_pos]) if loader_mode == 'train' else rpn_pos
+    pos = ConcatDataset([gt_pos, rpn_pos])
     pos = Subset(pos, idx(pos, sample_size)) if sample_mode == 'sampled' else pos
     
     print(' '.join((loader_mode, sample_mode, 'dataset size:', str(len(pos)))))
