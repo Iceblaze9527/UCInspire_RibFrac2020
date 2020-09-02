@@ -16,16 +16,15 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
 #data params
-img_path = '/home/yutongx/src_data/images/test/'
-bbox_path = '/home/yutongx/src_data/det_bbox_test/'
+img_path = '/home/yutongx/src_data/images/val/'
+bbox_path = '/home/yutongx/src_data/det_bbox_val/'
 resize = 64
-num_workers = 0
 
 test_sample_mode = 'sampled'
 test_sample_size = 16
 
 #test params
-batch_size = 16
+batch_size = 64
 
 #save params
 save_path = './checkpoints/checkpoint_9'
@@ -49,7 +48,7 @@ def main():
     model.load_state_dict(checkpoint['model_state_dict'])
     
     test_loader = get_loader(img_path, bbox_path, sample_mode = test_sample_mode, resize=resize,
-                             batch_size=batch_size, sample_size=test_sample_size, num_workers=num_workers)
+                             batch_size=batch_size, sample_size=test_sample_size, num_workers=0)
 
     print('Output Test Results.')
     print('====================')

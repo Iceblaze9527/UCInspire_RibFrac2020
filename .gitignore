@@ -1,7 +1,5 @@
-**/bbox
 **/checkpoints
-**/masks
 **/.ipynb_check*
 **/*.pyc
 **/dataset/*.pyc
-codelet.ipynb
+**/dataset_test/*.pyc

@@ -26,7 +26,6 @@ def train(loader, model, optim, criterion):
         y_true_all = concat(y_true_all, y)
         y_name_all.extend(y_name)
         y_center_all = concat(y_center_all, y_center)
-
         
         X = X.float().cuda() # [N, IC=1, D, H, W]
         y = y.float().cuda() # [N]
@@ -138,10 +137,10 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         epoch_end = utils.tic()
         print('epoch runtime: ', utils.delta_time(epoch_start, epoch_end))
         
-        train_loss, train_acc, train_prc, train_rec, train_roc_auc = metrics(
+        train_loss, train_acc, train_prc, train_rec, train_roc_auc, train_prc_rec = metrics(
             train_results, csv_path = os.path.join(data_path, 'train_%02d.csv'%(epoch)), is_test=False)
        
-        val_loss, val_acc, val_prc, val_rec, val_roc_auc = metrics(
+        val_loss, val_acc, val_prc, val_rec, val_roc_auc, val_prc_rec = metrics(
             val_results, csv_path = os.path.join(data_path, 'val_%02d.csv'%(epoch)), is_test=False)
         
         print('---------------------')
@@ -167,6 +166,7 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         tb_writer.add_scalars('Precision', {'train_precision': train_prc, 'val_precision': val_prc}, global_step=epoch)
         tb_writer.add_scalars('Recall', {'train_recall': train_rec, 'val_recall': val_rec}, global_step=epoch)
         tb_writer.add_scalars('ROC AUC', {'train_roc_auc': train_roc_auc, 'val_roc_auc': val_roc_auc}, global_step=epoch)
+        tb_writer.add_figure('PRC', [utils.draw_curve(train_prc_rec), utils.draw_curve(val_prc_rec)], global_step=epoch)
         
         for name, value in model.named_parameters():
             tb_writer.add_histogram(name, value.data.cpu().numpy(), global_step=epoch)
@@ -176,7 +176,7 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         if val_loss < min_loss:
             min_loss = val_loss
             torch.save({'epoch': epoch, 'model_state_dict': model.state_dict(), 
-                        'optim_state_dict': optim.state_dict(),}, ckpt_path)
+                        'optim_state_dict': optim.state_dict()}, ckpt_path)
         
         print('====================')
     

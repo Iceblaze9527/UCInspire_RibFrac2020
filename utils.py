@@ -4,6 +4,7 @@ import datetime
 
 import torch
 from torch.nn import DataParallel
+import matplotlib.pyplot as plt
 
 ##TODO(3) logger module
 class Logger(object):
@@ -42,6 +43,19 @@ def gpu_manager(model):
         print('Only CPU is available.')
         
     return model
+
+
+def draw_curve(data, graph_path=None):
+    x, y, _ = data
+    fig, ax = plt.subplots()
+    ax.plot(y, x)
+
+    if graph_path is not None:
+        fig.savefig(graph_path)
+    
+    plt.close(fig)
+    
+    return fig
 
 
 timestamp = lambda: time.asctime(time.localtime(time.time()))

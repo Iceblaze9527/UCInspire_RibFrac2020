@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score, precision_recall_curve
 import pandas as pd
 
 def metrics(results, csv_path, is_test=False):
@@ -19,8 +19,13 @@ def metrics(results, csv_path, is_test=False):
 
         df.to_csv(csv_path, index=False, sep=',')
 
-        return np.average(losses), accuracy_score(y_true, y_pred), precision_score(y_true, y_pred), \
-    recall_score(y_true, y_pred), roc_auc_score(y_true, y_score)
+        acc = accuracy_score(y_true, y_pred)
+        prc = precision_score(y_true, y_pred, zero_division=0)
+        rec = recall_score(y_true, y_pred, zero_division=0) 
+        roc_auc = roc_auc_score(y_true, y_score)
+        prc_rec = precision_recall_curve(y_true, y_score)
+        
+        return np.average(losses), acc, prc, rec, roc_auc, prc_rec
     
     else:
         y_name, y_center, y_score = results

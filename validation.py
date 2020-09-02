@@ -12,14 +12,13 @@ from metrics import metrics
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 seed = 15
 
 #data params
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox_binary/'
 resize = 64
-num_workers = 0
 
 eval_sample_mode = 'sampled'
 eval_sample_size = 16
@@ -43,16 +42,15 @@ def main():
     sys.stdout = utils.Logger(os.path.join(eval_path, 'log'))
     
     model = FeatureNet(in_channels=1, out_channels=1)
-    criterion = nn.BCEWithLogitsLoss(reduction='none')
-    
     model = utils.gpu_manager(model)
+    criterion = nn.BCEWithLogitsLoss(reduction='none')
     
     checkpoint = torch.load(os.path.join(save_path, 'checkpoint.tar.gz'))
     model.load_state_dict(checkpoint['model_state_dict'])
     
     eval_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = eval_sample_mode,
                              resize=resize, augmenter=None, batch_size=batch_size, 
-                             sample_size=eval_sample_size, pos_rate=eval_pos_rate, num_workers=num_workers)
+                             sample_size=eval_sample_size, pos_rate=eval_pos_rate, num_workers=0)
 
     print('Output Validation Results.')
     print('====================')
@@ -65,7 +63,7 @@ def main():
     end = utils.tic()
     print('overall runtime: ', utils.delta_time(start, end))
     
-    eval_loss, eval_acc, eval_prc, eval_rec, eval_roc_auc = metrics(
+    eval_loss, eval_acc, eval_prc, eval_rec, eval_roc_auc, eval_prc_rec = metrics(
         eval_results, csv_path=os.path.join(eval_path, 'eval.csv'), is_test=False)
     
     print('---------------------')
@@ -76,6 +74,8 @@ def main():
     print('Recall:', eval_rec)
     print('ROC AUC:', eval_roc_auc)
     print('====================')
+    
+    utils.draw_curve(eval_prc_rec, graph_path=os.path.join(eval_path, 'eval.png'))
 
 if __name__ == '__main__':
     main()
