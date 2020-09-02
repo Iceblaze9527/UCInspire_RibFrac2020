@@ -79,7 +79,9 @@ def main():
     
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=milestones, gamma=lr_gamma)
     
-    aug = iaa.SomeOf((0, None), [
+    aug = iaa.Sequential([
+        iaa.Fliplr(0.5),
+        iaa.Flipud(0.5),
         iaa.Affine(scale=scale),
         iaa.Affine(translate_percent=translation),
         iaa.Affine(rotate=rotate)])
