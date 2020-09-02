@@ -19,7 +19,6 @@ seed = 15
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox_multi/'
 resize = 64
-num_workers = 0
 
 eval_sample_mode = 'all'
 eval_sample_size = 16
@@ -27,8 +26,8 @@ eval_sample_size = 16
 batch_size = 128
 
 #save params
-save_path = './checkpoints/checkpoint_1'
-out_path = './checkpoints/checkpoint_1_gt'
+save_path = './checkpoints/checkpoint_3'
+out_path = './checkpoints/checkpoint_3'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'
@@ -42,16 +41,17 @@ def main():
     sys.stdout = utils.Logger(os.path.join(eval_path, 'log'))
     
     model = FeatureNet(in_channels=1, out_channels=4)
-    criterion = nn.CrossEntropyLoss(reduction='none')
-    
     model = utils.gpu_manager(model)
+    criterion = nn.CrossEntropyLoss(reduction='none')
     
     checkpoint = torch.load(os.path.join(save_path, 'checkpoint.tar.gz'))
     model.load_state_dict(checkpoint['model_state_dict'])
+    epoch = checkpoint['epoch']
+    print(f'Best epoch {epoch}.')
     
     eval_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = eval_sample_mode,
                              resize=resize, augmenter=None, batch_size=batch_size, 
-                             sample_size=eval_sample_size, num_workers=num_workers)
+                             sample_size=eval_sample_size, num_workers=0)
 
     print('Output Validation Results.')
     print('====================')
@@ -64,7 +64,7 @@ def main():
     end = utils.tic()
     print('overall runtime: ', utils.delta_time(start, end))
     
-    eval_loss, eval_acc, eval_prc, eval_rec, eval_roc_auc = metrics(
+    eval_loss, eval_acc, eval_prc, eval_rec, eval_f1, eval_conf_mat, eval_roc_auc = metrics(
         eval_results, csv_path=os.path.join(eval_path, 'eval.csv'), is_test=False)
     
     print('---------------------')
@@ -73,6 +73,8 @@ def main():
     print('Accuracy: ', eval_acc)
     print('Precision:', eval_prc)
     print('Recall:', eval_rec)
+    print('Macro F1:', eval_f1)
+    print('Confusion Matrix:\n', eval_conf_mat)
     print('ROC AUC:', eval_roc_auc)
     print('====================')
 

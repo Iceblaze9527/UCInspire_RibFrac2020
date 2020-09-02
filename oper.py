@@ -138,10 +138,10 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         epoch_end = utils.tic()
         print('epoch runtime: ', utils.delta_time(epoch_start, epoch_end))
         
-        train_loss, train_acc, train_prc, train_rec, train_roc_auc = metrics(
+        train_loss, train_acc, train_prc, train_rec, train_f1, train_conf_mat, train_roc_auc = metrics(
             train_results, csv_path = os.path.join(data_path, 'train_%02d.csv'%(epoch)), is_test=False)
        
-        val_loss, val_acc, val_prc, val_rec, val_roc_auc = metrics(
+        val_loss, val_acc, val_prc, val_rec, val_f1, val_conf_mat, val_roc_auc = metrics(
             val_results, csv_path = os.path.join(data_path, 'val_%02d.csv'%(epoch)), is_test=False)
         
         print('---------------------')
@@ -150,6 +150,8 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         print('Accuracy: ', train_acc)
         print('Precision:', train_prc)
         print('Recall:', train_rec)
+        print('Macro F1:', train_f1)
+        print('Confusion Matrix:\n', train_conf_mat)
         print('ROC AUC:', train_roc_auc)
         
         print('---------------------')
@@ -158,6 +160,8 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         print('Accuracy: ', val_acc)
         print('Precision:', val_prc)
         print('Recall:', val_rec)
+        print('Macro F1:', val_f1)
+        print('Confusion Matrix:\n', val_conf_mat)
         print('ROC AUC:', val_roc_auc)
         
         #TODO(3) tensorboard logger
@@ -166,6 +170,7 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         tb_writer.add_scalars('Accuracy', {'train_acc': train_acc, 'val_acc': val_acc}, global_step=epoch)
         tb_writer.add_scalars('Precision', {'train_precision': train_prc, 'val_precision': val_prc}, global_step=epoch)
         tb_writer.add_scalars('Recall', {'train_recall': train_rec, 'val_recall': val_rec}, global_step=epoch)
+        tb_writer.add_scalars('Macro F1', {'train_f1': train_f1, 'val_f1': val_f1}, global_step=epoch)
         tb_writer.add_scalars('ROC AUC', {'train_roc_auc': train_roc_auc, 'val_roc_auc': val_roc_auc}, global_step=epoch)
         
         for name, value in model.named_parameters():
@@ -175,8 +180,9 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         #TODO(3): save criteria
         if val_loss < min_loss:
             min_loss = val_loss
-            torch.save({'epoch': epoch, 'model_state_dict': model.state_dict(), 
-                        'optim_state_dict': optim.state_dict(),}, ckpt_path)
+            torch.save({'epoch': epoch, 
+                        'model_state_dict': model.state_dict(), 
+                        'optim_state_dict': optim.state_dict()}, ckpt_path)
         
         print('====================')
     

@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, roc_auc_score
 import pandas as pd
 
 def metrics(results, csv_path, is_test=False):
@@ -25,9 +25,11 @@ def metrics(results, csv_path, is_test=False):
         accuracy = accuracy_score(y_true, y_pred)
         precision = precision_score(y_true, y_pred, average='macro', zero_division=0)
         recall = recall_score(y_true, y_pred, average='macro', zero_division=0)
+        f1 = f1_score(y_true, y_pred, average='macro', labels=[0,1,2,3], zero_division=0)
+        conf_mat = confusion_matrix(y_true, y_pred, labels=[0,1,2,3])
         roc_auc = roc_auc_score(y_true.reshape(-1), y_score, average='macro', multi_class='ovo', labels=[0,1,2,3])
 
-        return np.average(losses), accuracy, precision, recall, roc_auc
+        return np.average(losses), accuracy, precision, recall, f1, conf_mat, roc_auc 
     
     else:
         y_name, y_center, y_score = results

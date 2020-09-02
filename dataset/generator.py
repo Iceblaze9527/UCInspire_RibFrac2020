@@ -20,14 +20,13 @@ class DatasetGen(Dataset):
         public_id = lambda name: ''.join(('RibFrac', re.sub(r"\D", "", name)))
         
         bbox = self.bboxes[index, :-1]
-        label = self.bboxes[index, -1]
         
         img = nib.load(self.img_name).get_fdata()#H*W*D
         img = self.crop(img, bbox, self.resize)#H*W*D
-        img = self.thresholding(img, low_th=100, high_th=3071)
-        
         img = self.aug(image=img) if self.aug is not None else img
         img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
+        
+        label = self.bboxes[index, -1]
         
         return torch.from_numpy(img), [torch.from_numpy(np.array([label - 1]).astype(np.int64)), 
                                        public_id(self.img_name), bbox[:3]]
@@ -48,12 +47,6 @@ class DatasetGen(Dataset):
                 
         return bbox_data
     
-    @staticmethod
-    def thresholding(img, low_th=100, high_th=3071):
-        img[img < low_th] = 0
-        img[img > high_th] = 0
-        
-        return np.log(1+img)
     
     @staticmethod
     def crop(image, bbox, length):
@@ -62,6 +55,8 @@ class DatasetGen(Dataset):
 
         start_crop = lambda center, length: int(max(start(center, length), 0))
         end_crop = lambda center, length, max_len: int(min(end(center, length), max_len))
+        
+        pad = lambda img, pad_size, criterion: np.pad(img, pad_size, 'constant', constant_values=-1024) if criterion else img
 
         zc, yc, xc, dz, dy, dx = bbox
 
@@ -74,13 +69,13 @@ class DatasetGen(Dataset):
 
         img = image[st['xs']:st['xt'], st['ys']:st['yt'], st['zs']:st['zt']]
 
-        img = np.pad(img, ((abs(start(xc, length)),0),(0,0),(0,0)), 'constant') if start(xc, length) < 0 else img
-        img = np.pad(img, ((0,  abs(end(xc, length)) - image.shape[0]),(0,0),(0,0)), 'constant') if end(xc, length) > image.shape[0] else img
+        img = pad(img, ((abs(start(xc, length)),0),(0,0),(0,0)), start(xc, length)<0)
+        img = pad(img, ((0,abs(end(xc, length))-image.shape[0]),(0,0),(0,0)), end(xc, length)>image.shape[0])
 
-        img = np.pad(img, ((0,0),(abs(start(yc, length)),0),(0,0)), 'constant') if start(yc, length) < 0 else img
-        img = np.pad(img, ((0,0),(0,  abs(end(yc, length)) - image.shape[1]),(0,0)), 'constant') if end(yc, length) > image.shape[1] else img
+        img = pad(img, ((0,0),(abs(start(yc, length)),0),(0,0)), start(yc, length)<0)
+        img = pad(img, ((0,0),(0,abs(end(yc, length))-image.shape[1]),(0,0)), end(yc, length)>image.shape[1])
 
-        img = np.pad(img, ((0,0),(0,0),(abs(start(zc, length)),0)), 'constant') if start(zc, length) < 0 else img
-        img = np.pad(img, ((0,0),(0,0),(0,  abs(end(zc, length)) - image.shape[2])), 'constant') if end(zc, length) > image.shape[2] else img
+        img = pad(img, ((0,0),(0,0),(abs(start(zc, length)),0)), start(zc, length)<0)
+        img = pad(img, ((0,0),(0,0),(0,abs(end(zc, length))-image.shape[2])), end(zc, length)>image.shape[2])
 
         return img

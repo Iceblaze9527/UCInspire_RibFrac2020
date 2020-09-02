@@ -40,7 +40,7 @@ epochs = 16
 batch_size = 64
 
 #optim params
-lr = 5e-5
+lr = 1e-5
 betas = (0.9, 0.999)
 eps = 1e-08
 weight_decay = 1e-3
@@ -50,7 +50,7 @@ milestones = [24, 48]
 lr_gamma = 0.5
 
 #save params
-save_path = './checkpoints/checkpoint_4'
+save_path = './checkpoints/checkpoint_7'
 
 def main():
     if not os.path.exists(save_path):
@@ -61,9 +61,8 @@ def main():
     sys.stdout = utils.Logger(os.path.join(save_path, 'log'))
     
     model = FeatureNet(in_channels=1, out_channels=4)
-    criterion = nn.CrossEntropyLoss(reduction='none')
-    
     model = utils.gpu_manager(model)
+    criterion = nn.CrossEntropyLoss(reduction='none')
 
     if is_cont == True:
         checkpoint = torch.load(ckpt_path)
