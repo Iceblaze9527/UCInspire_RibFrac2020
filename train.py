@@ -6,7 +6,6 @@ import torch.nn as nn
 import imgaug.augmenters as iaa
 
 from architecture import FeatureNet
-from dataset.utils import get_loader
 from oper import run
 import utils
 
@@ -15,31 +14,31 @@ import utils
 os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
-#model params
+#training params
 is_cont = False #resume training (if any)
 #ckpt_path = './checkpoints/checkpoint_3/checkpoint.tar.gz'
+epochs = 8
 
-#data params
+#loader params
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox_binary/'
-
 resize = 64
+batch_size = 64
+num_workers = 8
+
 scale = (0.8,1.2)
 translation = (-0.2,0.2)
 rotate = (-45, 45)
-num_workers = 8
 
+#train_params
 train_sample_mode = 'sampled'
 train_sample_size = 16
 train_pos_rate = 0.5
 
+#val_params
 val_sample_mode = 'sampled'
 val_sample_size = 16
 val_pos_rate = 0.5
-
-#training params
-epochs = 8
-batch_size = 64
 
 #optim params
 lr = 5e-5
@@ -53,6 +52,30 @@ lr_gamma = 0.5
 
 #save params
 save_path = './checkpoints/checkpoint_10'
+
+#param dict
+loader_params = {
+        'img_path': img_path,
+        'bbox_path': bbox_path,
+        'resize': resize,
+        'batch_size': batch_size,
+        'num_workers': num_workers
+    }
+
+train_params = {
+        'sample_mode': train_sample_mode,
+        'sample_size': train_sample_size,
+        'pos_rate': train_pos_rate
+    }
+
+val_params = {
+        'sample_size': val_sample_size,
+        'sample_mode': val_sample_mode,
+        'pos_rate': val_pos_rate
+    }
+
+data_params = (loader_params, train_params, val_params)
+
 
 def main():
     if not os.path.exists(save_path):
@@ -84,17 +107,9 @@ def main():
         iaa.Flipud(0.5),
         iaa.Affine(scale=scale),
         iaa.Affine(translate_percent=translation),
-        iaa.Affine(rotate=rotate)])
+        iaa.Affine(rotate=rotate)]) 
 
-    train_loader = get_loader(img_path, bbox_path, loader_mode='train', sample_mode=train_sample_mode,
-                              resize=resize, augmenter=aug, batch_size=batch_size, 
-                              sample_size=train_sample_size, pos_rate=train_pos_rate, num_workers=num_workers)
-    
-    val_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode=val_sample_mode,
-                            resize=resize, augmenter=None, batch_size=batch_size, 
-                            sample_size=val_sample_size, pos_rate=val_pos_rate, num_workers=0)
-
-    run(train_loader=train_loader, val_loader=val_loader, model=model, epochs=epochs, optim=optim, 
+    run(data_params=data_params, augmenter=aug, model=model, epochs=epochs, optim=optim, 
         criterion=criterion, scheduler=scheduler, save_path=save_path)
     
 if __name__ == '__main__':

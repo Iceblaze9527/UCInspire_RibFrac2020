@@ -30,6 +30,21 @@ batch_size = 16
 save_path = './checkpoints/checkpoint_9'
 out_path = './checkpoints/checkpoint_9_deb'
 
+#param dict
+loader_params = {
+        'img_path': img_path,
+        'bbox_path': bbox_path,
+        'resize': resize,
+        'batch_size': batch_size,
+        'num_workers': 0
+    }
+
+eval_params = {
+        'sample_size': eval_sample_size,
+        'sample_mode': eval_sample_mode,
+        'pos_rate': eval_pos_rate
+    }
+
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'
     
@@ -48,9 +63,7 @@ def main():
     checkpoint = torch.load(os.path.join(save_path, 'checkpoint.tar.gz'))
     model.load_state_dict(checkpoint['model_state_dict'])
     
-    eval_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = eval_sample_mode,
-                             resize=resize, augmenter=None, batch_size=batch_size, 
-                             sample_size=eval_sample_size, pos_rate=eval_pos_rate, num_workers=0)
+    eval_loader = get_loader(loader_mode='val', augmenter=None, **loader_params, **eval_params)
 
     print('Output Validation Results.')
     print('====================')
