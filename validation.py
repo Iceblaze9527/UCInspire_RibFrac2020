@@ -19,15 +19,30 @@ seed = 15
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox_multi/'
 resize = 64
+batch_size = 128
 
+#eval params
 eval_sample_mode = 'all'
 eval_sample_size = 16
 
-batch_size = 128
-
 #save params
-save_path = './checkpoints/checkpoint_3'
-out_path = './checkpoints/checkpoint_3'
+save_path = './checkpoints/checkpoint_6'
+out_path = './checkpoints/checkpoint_6'
+
+#param dict
+loader_params = {
+        'img_path': img_path,
+        'bbox_path': bbox_path,
+        'resize': resize,
+        'batch_size': batch_size,
+        'num_workers': 0
+    }
+
+eval_params = {
+        'sample_size': eval_sample_size,
+        'sample_mode': eval_sample_mode,
+        'pos_rate': eval_pos_rate
+    }
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'
@@ -49,9 +64,7 @@ def main():
     epoch = checkpoint['epoch']
     print(f'Best epoch {epoch}.')
     
-    eval_loader = get_loader(img_path, bbox_path, loader_mode='val', sample_mode = eval_sample_mode,
-                             resize=resize, augmenter=None, batch_size=batch_size, 
-                             sample_size=eval_sample_size, num_workers=0)
+    eval_loader = get_loader(loader_mode='val', augmenter=None, **loader_params, **eval_params)
 
     print('Output Validation Results.')
     print('====================')

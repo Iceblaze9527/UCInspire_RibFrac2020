@@ -3,10 +3,12 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import pandas as pd
 
 def metrics(results, csv_path, is_test=False):
+    maxi = lambda score: np.max(score, axis=1)
     pred = lambda score: np.argmax(score, axis=1)
     
     if is_test == False:
         y_name, y_center, y_score, y_true, losses = results
+        y_score_max = maxi(y_score)
         y_pred = pred(y_score)
 
         df = pd.DataFrame({'public_id': y_name, 
@@ -17,6 +19,7 @@ def metrics(results, csv_path, is_test=False):
                            'proba_2': y_score[:,1].reshape(-1),
                            'proba_3': y_score[:,2].reshape(-1),
                            'proba_4': y_score[:,3].reshape(-1),
+                           'proba_max': y_score_max.reshape(-1),
                            'y_pred': (y_pred + 1).reshape(-1),
                            'y_true': (y_true + 1).reshape(-1)})
 
@@ -33,6 +36,7 @@ def metrics(results, csv_path, is_test=False):
     
     else:
         y_name, y_center, y_score = results
+        y_score_max = maxi(y_score)
         y_pred = pred(y_score)
 
         df = pd.DataFrame({'public_id': y_name, 
@@ -43,6 +47,7 @@ def metrics(results, csv_path, is_test=False):
                            'proba_2': y_score[:,1].reshape(-1),
                            'proba_3': y_score[:,2].reshape(-1),
                            'proba_4': y_score[:,3].reshape(-1),
+                           'proba_max': y_score_max.reshape(-1),
                            'y_pred': (y_pred + 1).reshape(-1)})
 
         df.to_csv(csv_path, index=False, sep=',')

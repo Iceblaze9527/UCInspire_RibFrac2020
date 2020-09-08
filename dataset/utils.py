@@ -20,8 +20,7 @@ def get_dataset(img_path, bbox_path, label_names, resize=64, augmenter=None):
     return ConcatDataset(datasets)
 
 
-def get_loader(img_path, bbox_path, loader_mode, sample_mode, resize=64, augmenter=None, batch_size=1, 
-               sample_size=800, num_workers=4):
+def get_loader(loader_mode, augmenter, img_path, bbox_path, resize, batch_size, num_workers, sample_mode, sample_size):
     
     assert loader_mode in ['train', 'val'], f'Invalid mode, got {loader_mode}.'
     assert sample_mode in ['all', 'sampled'], f'Invalid sample mode, got {sample_mode}.'

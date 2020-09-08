@@ -20,15 +20,15 @@ img_path = '/home/yutongx/src_data/images/test/'
 bbox_path = '/home/yutongx/src_data/det_bbox_test/'
 resize = 64
 
-test_sample_mode = 'sampled'
+test_sample_mode = 'all'
 test_sample_size = 16
 
 #test params
 batch_size = 16
 
 #save params
-save_path = './checkpoints/checkpoint_3'
-out_path = './checkpoints/checkpoint_3'
+save_path = './checkpoints/checkpoint_6'
+out_path = './checkpoints/checkpoint_6'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'

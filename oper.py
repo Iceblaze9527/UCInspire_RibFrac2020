@@ -6,6 +6,7 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from tqdm import tqdm
 
+from dataset.utils import get_loader
 import utils
 from metrics import metrics
 
@@ -93,7 +94,7 @@ def test(loader, model):
             X = X.float().cuda() # [N, IC=1, D, H, W]
             pred = model(X) # logit proba [N, OC]
             
-            y_score = torch.sigmoid(pred).detach().cpu().numpy()
+            y_score = F.softmax(pred, dim=1).detach().cpu().numpy()
             y_score_all = concat(y_score_all, y_score)
 
             del X, pred
@@ -102,7 +103,9 @@ def test(loader, model):
     return y_name_all, y_center_all, y_score_all
 
 
-def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, save_path):
+def run(data_params, augmenter, model, epochs, optim, criterion, scheduler, save_path):
+    loader_params, train_params, val_params = data_params
+    
     ckpt_path = os.path.join(save_path, 'checkpoint.tar.gz')
     log_path = os.path.join(save_path, 'logs')
     data_path = os.path.join(save_path, 'data')
@@ -121,6 +124,8 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
     
     #TODO(3): save criteria
     min_loss = 65536
+    val_loader = get_loader(loader_mode='val', augmenter=None, **loader_params, **val_params)
+    
     print('====================')
     for epoch in tqdm(range(1, epochs + 1), desc = 'Epoch'): 
         torch.cuda.synchronize()
@@ -128,6 +133,7 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
         print('start at: ', utils.timestamp())
         epoch_start = utils.tic()
         
+        train_loader = get_loader(loader_mode='train', augmenter=augmenter, **loader_params, **train_params)
         train_results = train(loader=train_loader, model=model, optim=optim, criterion=criterion)
         val_results = evaluate(loader=val_loader, model=model, criterion=criterion)
         
@@ -178,8 +184,8 @@ def run(train_loader, val_loader, model, epochs, optim, criterion, scheduler, sa
             tb_writer.add_histogram(name + '/grad', value.grad.data.cpu().numpy(), global_step=epoch)
         
         #TODO(3): save criteria
-        if val_loss < min_loss:
-            min_loss = val_loss
+        if val_f1 > max_f1:
+            max_f1 = val_f1
             torch.save({'epoch': epoch, 
                         'model_state_dict': model.state_dict(), 
                         'optim_state_dict': optim.state_dict()}, ckpt_path)
