@@ -15,7 +15,7 @@ def train(loader, model, optim, criterion):
     model.train()
     
     y_name_all = []
-    y_center_all = np.array([])
+    y_box_all = np.array([])
     y_score_all = np.array([])
     y_true_all = np.array([])
     losses = np.array([])
@@ -23,10 +23,10 @@ def train(loader, model, optim, criterion):
     for idx, (X, y_src) in tqdm(enumerate(loader), total=len(loader), desc='Training'):
         optim.zero_grad()
         
-        y, y_name, y_center = y_src
+        y, y_name, y_box = y_src
         y_true_all = concat(y_true_all, y)
         y_name_all.extend(y_name)
-        y_center_all = concat(y_center_all, y_center)
+        y_box_all = concat(y_box_all, y_box)
         
         X = X.float().cuda() # [N, IC=1, D, H, W]
         y = y.float().cuda() # [N]
@@ -43,24 +43,24 @@ def train(loader, model, optim, criterion):
         del X, y, pred, loss
         torch.cuda.empty_cache()
     
-    return y_name_all, y_center_all, y_score_all, y_true_all, losses
+    return y_name_all, y_box_all, y_score_all, y_true_all, losses
 
 
 def evaluate(loader, model, criterion):
     model.eval()
     
     y_name_all = []
-    y_center_all = np.array([])
+    y_box_all = np.array([])
     y_score_all = np.array([])
     y_true_all = np.array([])
     losses = np.array([])
     
     with torch.no_grad():
         for idx, (X, y_src) in tqdm(enumerate(loader), total=len(loader), desc='Validating'):
-            y, y_name, y_center = y_src
+            y, y_name, y_box = y_src
             y_true_all = concat(y_true_all, y)
             y_name_all.extend(y_name)
-            y_center_all = concat(y_center_all, y_center)
+            y_box_all = concat(y_box_all, y_box)
             
             X = X.float().cuda() # [N, IC=1, D, H, W]
             y = y.float().cuda() # [N]
@@ -74,21 +74,21 @@ def evaluate(loader, model, criterion):
             del X, y, pred, loss
             torch.cuda.empty_cache()
     
-    return y_name_all, y_center_all, y_score_all, y_true_all, losses
+    return y_name_all, y_box_all, y_score_all, y_true_all, losses
 
 
 def test(loader, model):
     model.eval()
     
     y_name_all = []
-    y_center_all = np.array([])
+    y_box_all = np.array([])
     y_score_all = np.array([])
     
     with torch.no_grad():
         for idx, (X, y_src) in tqdm(enumerate(loader), total=len(loader), desc='Testing'):
-            y_name, y_center = y_src
+            y_name, y_box = y_src
             y_name_all.extend(y_name)
-            y_center_all = concat(y_center_all, y_center)
+            y_box_all = concat(y_box_all, y_box)
             
             X = X.float().cuda() # [N, IC=1, D, H, W]
             pred = model(X) # logit proba [N, OC]
@@ -99,7 +99,7 @@ def test(loader, model):
             del X, pred
             torch.cuda.empty_cache()
     
-    return y_name_all, y_center_all, y_score_all
+    return y_name_all, y_box_all, y_score_all
 
 
 def run(data_params, augmenter, model, epochs, optim, criterion, scheduler, save_path):

@@ -12,23 +12,23 @@ from metrics import metrics
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 seed = 15
 
 #data params
-img_path = '/home/yutongx/src_data/images/val/'
-bbox_path = '/home/yutongx/src_data/det_bbox_val/'
+img_path = '/home/yutongx/src_data/images/test/'
+bbox_path = '/home/yutongx/src_data/det_bbox_test/'
 resize = 64
 
-test_sample_mode = 'sampled'
+test_sample_mode = 'all'
 test_sample_size = 16
 
 #test params
 batch_size = 64
 
 #save params
-save_path = './checkpoints/checkpoint_9'
-out_path = './checkpoints/checkpoint_9_deb'
+save_path = './checkpoints/checkpoint_10'
+out_path = './checkpoints/checkpoint_10_test'
 
 def main():
     assert os.path.exists(save_path), 'Save path does not exist.'

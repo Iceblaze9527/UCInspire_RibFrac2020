@@ -22,18 +22,18 @@ class DatasetGen(Dataset):
         
         bbox = self.bboxes[index, :-1]
         
-        img = nib.load(self.img_name).get_fdata()#H*W*D
-        img = self.crop(img, bbox, self.resize)#H*W*D
+        img = nib.load(self.img_name).get_fdata()#W*H*D
+        img = self.crop(img, bbox, self.resize)#W*H*D
         factor = np.array([self.resize, self.resize, self.resize]) / np.array(img.shape)
         img = zoom(img, factor, order=0)
         
-        img = self.aug(image=img) if self.aug is not None else img#H*W*D
-        img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#H*W*D -> D*H*W -> C*D*H*W
+        img = self.aug(image=img) if self.aug is not None else img#W*H*D
+        img = np.expand_dims(np.swapaxes(img, -1, 0), axis=0)#W*H*D -> D*W*H -> C*D*W*H
         
         label = self.bboxes[index, -1]
         
         return torch.from_numpy(img), [torch.from_numpy(np.array([label]).astype(np.int64)), 
-                                       public_id(self.img_name), bbox[:3]]
+                                       public_id(self.img_name), bbox]
     
     def __len__(self):
         return (self.bboxes).shape[0]

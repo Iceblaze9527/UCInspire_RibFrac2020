@@ -12,23 +12,23 @@ from metrics import metrics
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
 seed = 15
 
 #data params
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox_binary/'
 resize = 64
+batch_size = 16
 
-eval_sample_mode = 'sampled'
+#eval params
+eval_sample_mode = 'all'
 eval_sample_size = 16
 eval_pos_rate = 0.5
 
-batch_size = 16
-
 #save params
-save_path = './checkpoints/checkpoint_9'
-out_path = './checkpoints/checkpoint_9_deb'
+save_path = './checkpoints/checkpoint_11'
+out_path = './checkpoints/checkpoint_11'
 
 #param dict
 loader_params = {
@@ -62,6 +62,8 @@ def main():
     
     checkpoint = torch.load(os.path.join(save_path, 'checkpoint.tar.gz'))
     model.load_state_dict(checkpoint['model_state_dict'])
+    epoch = checkpoint['epoch']
+    print(f'Best epoch {epoch}.')
     
     eval_loader = get_loader(loader_mode='val', augmenter=None, **loader_params, **eval_params)
 

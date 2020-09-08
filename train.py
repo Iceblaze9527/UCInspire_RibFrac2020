@@ -11,19 +11,19 @@ import utils
 
 #TODO(3) config files
 #set global variable
-os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 seed = 15
 
 #training params
 is_cont = False #resume training (if any)
 #ckpt_path = './checkpoints/checkpoint_3/checkpoint.tar.gz'
-epochs = 8
+epochs = 64
 
 #loader params
 img_path = '/home/yutongx/src_data/images/'
 bbox_path = '/home/yutongx/src_data/bbox_binary/'
 resize = 64
-batch_size = 64
+batch_size = 128
 num_workers = 8
 
 scale = (0.8,1.2)
@@ -32,12 +32,12 @@ rotate = (-45, 45)
 
 #train_params
 train_sample_mode = 'sampled'
-train_sample_size = 16
+train_sample_size = 2048
 train_pos_rate = 0.5
 
 #val_params
 val_sample_mode = 'sampled'
-val_sample_size = 16
+val_sample_size = 512
 val_pos_rate = 0.5
 
 #optim params
@@ -51,7 +51,7 @@ milestones = [24, 48]
 lr_gamma = 0.5
 
 #save params
-save_path = './checkpoints/checkpoint_10'
+save_path = './checkpoints/checkpoint_11'
 
 #param dict
 loader_params = {
